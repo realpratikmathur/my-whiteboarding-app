@@ -37,16 +37,22 @@ public static class SelfTest
             try
             {
                 await Task.Delay(1500);
-                int flyout = Array.IndexOf(args, "--flyout");
-                if (flyout >= 0)
+                // --selftest <log> [scenario] [scenario argument]
+                string scenario = args.Length > index + 2 ? args[index + 2] : "core";
+                string argument = args.Length > index + 3 ? args[index + 3] : "";
+                switch (scenario)
                 {
-                    // Opens a tool's configuration flyout so a screenshot can show whether it renders.
-                    window.OpenToolFlyout(args[flyout + 1], log);
-                    await Task.Delay(1500);
-                }
-                else
-                {
-                    await window.RunSelfTestAsync(log);
+                    case "flyout":
+                        // Opens a tool's configuration flyout so a screenshot can show whether it renders.
+                        window.OpenToolFlyout(argument, log);
+                        await Task.Delay(1500);
+                        break;
+                    case "bigpage":
+                        await window.RunBigPageTestAsync(log);
+                        break;
+                    default:
+                        await window.RunSelfTestAsync(log);
+                        break;
                 }
 
                 log.AppendLine("DONE");
