@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+    <RootNamespace>InkBoard</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+
+    <!-- Unpackaged, and self-contained because the experimental runtime has no machine-wide installer here. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+
+    <!-- CS8305 / WMC1501 (XAML compiler equivalent): InkCanvas/InkPresenter/InkToolbar are
+         experimental-channel APIs ("for evaluation purposes only"). -->
+    <NoWarn>$(NoWarn);CS8305;WMC1501</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Inking exists only in the experimental channel. Do not replace with a stable version. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.4-experimental" />
+  </ItemGroup>
+
+  <!-- The self-contained runtime ships "Microsoft.ui.xaml.dll" but its activation manifest names
+       "Microsoft.UI.Xaml.dll". If the repo sits in an NTFS case-sensitive directory (new folders inherit
+       the flag), the app dies at startup with 0x80040111 "ClassFactory cannot supply requested class".
+       Clear the flag on the output folder only; a no-op when the folder is already case-insensitive. -->
+  <Target Name="DisableOutputCaseSensitivity" BeforeTargets="PrepareForBuild" Condition="'$(OS)' == 'Windows_NT'">
+    <MakeDir Directories="$(OutDir)" />
+    <Exec Command="fsutil.exe file setCaseSensitiveInfo &quot;$(OutDir.TrimEnd('\'))&quot; disable" ContinueOnError="true" StandardOutputImportance="low" />
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InkBoard.Core\InkBoard.Core.csproj" />
+  </ItemGroup>
+
+</Project>
