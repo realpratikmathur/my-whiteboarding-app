@@ -20,6 +20,9 @@ public interface IUndoStep
 
 public sealed record AddStrokesStep(IReadOnlyList<int> StrokeIds) : IUndoStep
 {
+    /// <summary>True when the strokes were drawn by hand just now (replay then redraws them over time).</summary>
+    public bool Drawn { get; init; }
+
     public void Undo(IStrokeSurface surface) => surface.Remove(StrokeIds);
     public void Redo(IStrokeSurface surface) => surface.Add(StrokeIds);
 }
@@ -85,6 +88,12 @@ public sealed class UndoStack(IStrokeSurface surface)
 
     public event EventHandler? Changed;
 
+    /// <summary>
+    /// Raised for every step as it takes effect: (step, false) when it is first made or redone,
+    /// (step, true) when it is undone.
+    /// </summary>
+    public event Action<IUndoStep, bool>? Applied;
+
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
 
@@ -93,6 +102,7 @@ public sealed class UndoStack(IStrokeSurface surface)
     {
         _undo.Push(step);
         _redo.Clear();
+        Applied?.Invoke(step, false);
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -105,6 +115,7 @@ public sealed class UndoStack(IStrokeSurface surface)
 
         step.Undo(surface);
         _redo.Push(step);
+        Applied?.Invoke(step, true);
         Changed?.Invoke(this, EventArgs.Empty);
         return true;
     }
@@ -118,6 +129,7 @@ public sealed class UndoStack(IStrokeSurface surface)
 
         step.Redo(surface);
         _undo.Push(step);
+        Applied?.Invoke(step, false);
         Changed?.Invoke(this, EventArgs.Empty);
         return true;
     }

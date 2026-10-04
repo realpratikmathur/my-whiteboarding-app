@@ -92,7 +92,7 @@ public sealed partial class MainWindow
     /// <summary>Called for every change to the open page; saves a moment after the last one.</summary>
     private void MarkPageDirty()
     {
-        if (_loadingPage || _currentPage is null)
+        if (_loadingPage || _replaying || _currentPage is null)
         {
             return;
         }
@@ -126,7 +126,15 @@ public sealed partial class MainWindow
                 File.Delete(inkPath);
             }
 
-            var data = new PageData { Width = PageSurface.Width, Height = PageSurface.Height, Objects = [.. _objects] };
+            var data = new PageData
+            {
+                Width = PageSurface.Width,
+                Height = PageSurface.Height,
+                Objects = [.. _objects],
+                // Same order as the strokes in ink.isf.
+                StrokeKeys = _document.Track(_document.Container.GetStrokes())
+                    .Select(handle => _strokeKeys.GetValueOrDefault(handle, -1)).ToList(),
+            };
             await File.WriteAllTextAsync(Path.Combine(folder, "page.json"), JsonSerializer.Serialize(data));
             await SaveRecordingAsync(folder);
         }
@@ -153,6 +161,7 @@ public sealed partial class MainWindow
             return;
         }
 
+        StopRecording();
         _saveTimer.Stop();
         Root.Focus(FocusState.Programmatic);   // commits a text box that is being edited
         await SaveCurrentPageAsync();
@@ -165,6 +174,8 @@ public sealed partial class MainWindow
             SelectObject(null);
             _document.ClearAll();
             ClearObjects();
+            _strokeKeys.Clear();
+            List<int> strokeKeys = [];
 
             _currentPage = page;
             string folder = PageFolder(page);
@@ -178,6 +189,7 @@ public sealed partial class MainWindow
                 PageData data = JsonSerializer.Deserialize<PageData>(await File.ReadAllTextAsync(dataPath)) ?? new PageData();
                 PageSurface.Width = Math.Max(data.Width, PageExtent.MinWidth);
                 PageSurface.Height = Math.Max(data.Height, PageExtent.MinHeight);
+                strokeKeys = data.StrokeKeys;
                 foreach (PageObject obj in data.Objects)
                 {
                     ShowObject(obj);
@@ -194,9 +206,16 @@ public sealed partial class MainWindow
                     await loaded.LoadAsync(input);
                 }
 
+                int index = 0;
                 foreach (var stroke in loaded.GetStrokes())
                 {
-                    _document.AddNew(stroke.Clone());
+                    int handle = _document.AddNew(stroke.Clone());
+                    if (index < strokeKeys.Count && strokeKeys[index] >= 0)
+                    {
+                        _strokeKeys[handle] = strokeKeys[index];
+                    }
+
+                    index++;
                 }
             }
 

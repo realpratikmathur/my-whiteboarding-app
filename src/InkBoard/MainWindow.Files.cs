@@ -64,6 +64,11 @@ public sealed partial class MainWindow
 
     private async void OnOpenClick(object sender, RoutedEventArgs e)
     {
+        if (_replaying)
+        {
+            return;
+        }
+
         var picker = new FileOpenPicker(AppWindow.Id);
         picker.FileTypeFilter.Add(".isf");
         picker.FileTypeFilter.Add(".gif");
@@ -139,6 +144,11 @@ public sealed partial class MainWindow
 
     private void OnCutClick(object sender, RoutedEventArgs e)
     {
+        if (_replaying)
+        {
+            return;
+        }
+
         if (CopySelection())
         {
             DeleteSelection();
@@ -160,6 +170,11 @@ public sealed partial class MainWindow
 
     private async void OnInsertImageClick(object sender, RoutedEventArgs e)
     {
+        if (_replaying)
+        {
+            return;
+        }
+
         var picker = new FileOpenPicker(AppWindow.Id);
         foreach (string extension in ImageExtensions)
         {
@@ -171,6 +186,11 @@ public sealed partial class MainWindow
 
     private async void OnInsertPdfClick(object sender, RoutedEventArgs e)
     {
+        if (_replaying)
+        {
+            return;
+        }
+
         var picker = new FileOpenPicker(AppWindow.Id);
         picker.FileTypeFilter.Add(".pdf");
         await RunInsertAsync(await picker.PickSingleFileAsync());
@@ -195,6 +215,11 @@ public sealed partial class MainWindow
 
     private async void OnPasteClick(object sender, RoutedEventArgs e)
     {
+        if (_replaying)
+        {
+            return;
+        }
+
         try
         {
             // Ink first (OneNote and InkBoard put ink on the clipboard), then pictures and copied files.

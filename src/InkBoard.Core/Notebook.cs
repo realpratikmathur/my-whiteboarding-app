@@ -14,6 +14,13 @@ public sealed class PageData
 {
     public double Width { get; set; }
     public double Height { get; set; }
+
+    /// <summary>
+    /// For each stroke in ink.isf, in file order: its key in the page's recording, or -1 if the recording
+    /// does not know it.
+    /// </summary>
+    public List<int> StrokeKeys { get; set; } = [];
+
     public List<PageObject> Objects { get; set; } = [];
 }
 

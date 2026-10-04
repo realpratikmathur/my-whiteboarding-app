@@ -33,6 +33,8 @@ public sealed partial class MainWindow : Window
         ConfigureHaptics();
         ConfigureModelerPanel();
         ConfigureCanvasBehaviours();
+        ConfigureRecording();
+        ConfigureReplay();
         ConfigureNotebook();
         SelfTest.RunIfRequested(this);
     }

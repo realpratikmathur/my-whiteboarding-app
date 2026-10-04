@@ -31,5 +31,7 @@ public sealed class PageObject
     public double Right => X + Width;
     public double Bottom => Y + Height;
 
+    public PageObject Clone() => (PageObject)MemberwiseClone();
+
     public bool Contains(double x, double y) => x >= X && x <= Right && y >= Y && y <= Bottom;
 }

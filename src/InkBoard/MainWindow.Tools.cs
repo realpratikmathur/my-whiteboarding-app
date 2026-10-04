@@ -39,7 +39,7 @@ public sealed partial class MainWindow
         Presenter.StrokesCollected += (_, args) =>
         {
             List<InkStroke> strokes = args.Strokes.ToList();
-            DispatcherQueue.TryEnqueue(() => _undo.Push(new AddStrokesStep(_document.Track(strokes))));
+            DispatcherQueue.TryEnqueue(() => _undo.Push(new AddStrokesStep(_document.Track(strokes)) { Drawn = true }));
         };
         Presenter.StrokesErased += (_, args) =>
         {
@@ -298,6 +298,11 @@ public sealed partial class MainWindow
 
     private void Undo()
     {
+        if (_replaying)
+        {
+            return;
+        }
+
         ClearSelection();
         _undo.Undo();
         _document.ClearSelection();
@@ -305,6 +310,11 @@ public sealed partial class MainWindow
 
     private void Redo()
     {
+        if (_replaying)
+        {
+            return;
+        }
+
         ClearSelection();
         _undo.Redo();
         _document.ClearSelection();
@@ -334,6 +344,11 @@ public sealed partial class MainWindow
 
     private void OnDeleteInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        if (_replaying)
+        {
+            return;
+        }
+
         if (!DeleteSelectedObject())
         {
             DeleteSelection();
