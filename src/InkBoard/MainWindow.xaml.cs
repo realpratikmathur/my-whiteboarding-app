@@ -33,6 +33,7 @@ public sealed partial class MainWindow : Window
         ConfigureHaptics();
         ConfigureModelerPanel();
         ConfigureCanvasBehaviours();
+        ConfigureViewInput();
         ConfigureRecording();
         ConfigureReplay();
         ConfigureNotebook();

@@ -402,6 +402,35 @@ Closing
 - [ ] The window's X closes the app (it did not before), and what you drew a moment earlier is there on
       the next start.
 
+## Phase 14 — Mouse wheel zoom and middle-button pan
+
+What I could and could not check: the wheel was tested with real wheel messages sent to the app's own
+window and zooms correctly. Mouse BUTTONS cannot be simulated that way, so the middle-button pan is
+untested with a real mouse; please check it first.
+
+Middle-button pan
+- [ ] With any pen tool selected: press and hold the middle mouse button (wheel click) over the page and
+      drag. The page moves with the mouse, in every direction, and stops when you release. No ink is drawn.
+- [ ] Same with the eraser, point eraser, lasso and Text tools selected: it pans; it does not erase, start a
+      lasso, or create a text box.
+- [ ] Pan while zoomed in (300%) and zoomed out (50%): the point you grabbed stays under the cursor.
+- [ ] If the middle button draws ink or does nothing, tell me which tool was selected: it means the ink
+      layer handles that button differently from what I assumed, and I will switch approach.
+
+Wheel zoom
+- [ ] Wheel up zooms in, wheel down zooms out, about 10% per notch, between 25% and 800%. The zoom button
+      (top right) shows the factor.
+- [ ] The point under the cursor stays put while zooming (zoom in on a word: it stays under the cursor).
+- [ ] Ctrl + wheel scrolls the page up/down; Shift + wheel scrolls left/right.
+- [ ] Ink stays sharp after zooming with the wheel, and the pen writes exactly under its tip afterwards.
+- [ ] Touch still pans with one finger and pinch-zooms; the pen still inks.
+- [ ] Note for a laptop touchpad: a two-finger scroll is a wheel to Windows, so it now zooms. Tell me if
+      you would rather have touchpad scrolling pan the page.
+
+Side-by-side with OneNote
+- [ ] Compare the feel of zooming and of middle-button navigation; say if the zoom step should be finer
+      or coarser.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

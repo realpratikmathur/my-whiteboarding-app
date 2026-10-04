@@ -78,6 +78,9 @@ public static class SelfTest
                     case "notebook-write":
                         await window.RunNotebookWriteTestAsync(log);
                         break;
+                    case "viewinput":
+                        await window.RunViewInputTestAsync(log);
+                        break;
                     case "pagemenu":
                         await window.RunPageMenuTestAsync(log);
                         break;
