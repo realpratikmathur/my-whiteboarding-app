@@ -5,14 +5,37 @@
     xmlns:local="using:InkBoard"
     Title="InkBoard">
 
-    <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,Auto">
+    <Grid x:Name="Root" RowDefinitions="Auto,*" ColumnDefinitions="*,Auto">
         <Grid.Resources>
             <local:CalligraphyPen x:Key="CalligraphyPen" />
         </Grid.Resources>
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="Z" Invoked="OnUndoInvoked" Modifiers="Control" />
+            <KeyboardAccelerator Key="Y" Invoked="OnRedoInvoked" Modifiers="Control" />
+            <KeyboardAccelerator Key="Delete" Invoked="OnDeleteInvoked" />
+        </Grid.KeyboardAccelerators>
 
-        <Grid Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <StackPanel Margin="8,0" Orientation="Horizontal" Spacing="4">
+                <Button
+                    x:Name="UndoButton"
+                    AutomationProperties.Name="Undo"
+                    Click="OnUndoClick"
+                    ToolTipService.ToolTip="Undo (Ctrl+Z)">
+                    <FontIcon FontSize="16" Glyph="&#xE7A7;" />
+                </Button>
+                <Button
+                    x:Name="RedoButton"
+                    AutomationProperties.Name="Redo"
+                    Click="OnRedoClick"
+                    ToolTipService.ToolTip="Redo (Ctrl+Y)">
+                    <FontIcon FontSize="16" Glyph="&#xE7A6;" />
+                </Button>
+            </StackPanel>
+
             <InkToolbar
                 x:Name="Toolbar"
+                Grid.Column="1"
                 HorizontalAlignment="Center"
                 AutomationProperties.Name="Ink tools"
                 InitialControls="None"
@@ -33,20 +56,73 @@
                     </InkToolbarCustomPenButton.ConfigurationContent>
                 </InkToolbarCustomPenButton>
                 <InkToolbarEraserButton />
+                <InkToolbarCustomToolButton
+                    x:Name="PointEraserButton"
+                    AutomationProperties.Name="Point eraser"
+                    ToolTipService.ToolTip="Point eraser (erases part of a stroke)">
+                    <FontIcon Glyph="&#xED60;" />
+                </InkToolbarCustomToolButton>
+                <InkToolbarCustomToolButton
+                    x:Name="LassoButton"
+                    AutomationProperties.Name="Lasso select"
+                    ToolTipService.ToolTip="Lasso select (drag inside the selection to move, Delete to remove)">
+                    <FontIcon Glyph="&#xEF20;" />
+                </InkToolbarCustomToolButton>
                 <InkToolbarStencilButton />
             </InkToolbar>
-            <ToggleButton
-                x:Name="DebugToggle"
-                Grid.Column="1"
+
+            <StackPanel
+                Grid.Column="2"
                 Margin="8,0"
-                VerticalAlignment="Center"
-                Content="Debug" />
+                Orientation="Horizontal"
+                Spacing="8">
+                <ToggleButton
+                    x:Name="DrawWithTouchToggle"
+                    Checked="OnDrawWithTouchChanged"
+                    Content="Draw with touch"
+                    Unchecked="OnDrawWithTouchChanged" />
+                <Button
+                    Click="OnResetZoomClick"
+                    ToolTipService.ToolTip="Reset zoom to 100%">
+                    <TextBlock x:Name="ZoomText" MinWidth="40" Text="100%" TextAlignment="Center" />
+                </Button>
+                <ToggleButton x:Name="DebugToggle" Content="Debug" />
+            </StackPanel>
         </Grid>
 
-        <!-- Wet and dry ink are both rendered by the platform InkCanvas. The app draws nothing itself. -->
-        <Grid Grid.Row="1" Background="White">
-            <InkCanvas x:Name="InkSurface" AutomationProperties.Name="Whiteboard" />
-        </Grid>
+        <!-- Touch pans and zooms; pen and mouse go to the InkCanvas. -->
+        <ScrollViewer
+            x:Name="CanvasScroller"
+            Grid.Row="1"
+            Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
+            HorizontalScrollBarVisibility="Auto"
+            HorizontalScrollMode="Enabled"
+            MaxZoomFactor="8"
+            MinZoomFactor="0.25"
+            VerticalScrollBarVisibility="Auto"
+            VerticalScrollMode="Enabled"
+            ZoomMode="Enabled">
+            <Grid Width="4000" Height="3000" Background="White">
+                <!-- Wet and dry ink are both rendered by the platform InkCanvas. The app draws no ink. -->
+                <InkCanvas x:Name="InkSurface" AutomationProperties.Name="Whiteboard" />
+
+                <!-- Selection chrome only (lasso outline and selection box). Never used for ink. -->
+                <Canvas IsHitTestVisible="False">
+                    <Polyline
+                        x:Name="LassoLine"
+                        Stroke="#FF0A64D8"
+                        StrokeDashArray="4,3"
+                        StrokeThickness="1.5"
+                        Visibility="Collapsed" />
+                    <Rectangle
+                        x:Name="SelectionRect"
+                        Stroke="#FF0A64D8"
+                        StrokeDashArray="4,3"
+                        StrokeThickness="1.5"
+                        Visibility="Collapsed" />
+                </Canvas>
+            </Grid>
+        </ScrollViewer>
 
         <!-- Beside the canvas, not over it: ink is composed as external content. -->
         <ScrollViewer
