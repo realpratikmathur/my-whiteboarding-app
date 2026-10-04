@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using InkBoard.Core;
+using Microsoft.UI.Xaml.Controls;
 using Windows.Foundation;
 using Windows.UI.Input.Inking;
 
@@ -46,6 +47,56 @@ public sealed partial class MainWindow
         await SaveCurrentPageAsync();
         log.AppendLine("tree: " + TreeOutline());
         log.AppendLine($"open at exit: \"{_currentPage?.Title}\" with {_document.Container.GetStrokes().Count} stroke(s)");
+    }
+
+    /// <summary>Scenario "pagemenu": page commands on a page that is not open, and dialogs versus ink input.</summary>
+    internal async Task RunPageMenuTestAsync(StringBuilder log)
+    {
+        NotebookPage first = _currentPage!;
+        NotebookPage beta = await AddPageAsync("B");
+        NotebookPage gamma = await AddPageAsync("C");
+        InkDrawingAttributes pen = Presenter.CopyDefaultDrawingAttributes();
+        _undo.Push(new AddStrokesStep([_document.AddNew(SelfTest.MakeStroke(pen, new Point(100, 100), new Point(400, 150)))]));
+        log.AppendLine($"tree: {TreeOutline()}; open \"{_currentPage?.Title}\"");
+
+        // The right-click menu for B, which is not the open page.
+        MenuFlyout menu = BuildPageMenu(beta);
+        log.AppendLine("menu for B: " + string.Join(", ", menu.Items.OfType<MenuFlyoutItem>().Select(i => i.Text + (i.IsEnabled ? "" : " (off)"))));
+        log.AppendLine("menu for first page: " + string.Join(", ", BuildPageMenu(first).Items.OfType<MenuFlyoutItem>().Where(i => !i.IsEnabled).Select(i => i.Text + " (off)")));
+        log.AppendLine("menu for empty space: " + string.Join(", ", BuildPageMenu(null).Items.OfType<MenuFlyoutItem>().Select(i => i.Text)));
+
+        await RenamePageAsync(beta, "Beta");
+        ReorderPage(beta, p => _notebook.Move(p, -1));
+        log.AppendLine($"after rename + move up of B: {TreeOutline()}; still open \"{_currentPage?.Title}\", window title \"{Title}\"");
+        ReorderPage(first, _notebook.Demote);
+        log.AppendLine($"after make-subpage of {first.Title}: {TreeOutline()}");
+        ReorderPage(first, _notebook.Promote);
+        await AddSubpageAsync("Beta child", parent: beta);
+        log.AppendLine($"after promote and new subpage under Beta: {TreeOutline()}; open \"{_currentPage?.Title}\"");
+        await OpenPageAsync(gamma);
+        log.AppendLine($"back on C: {_document.Container.GetStrokes().Count} stroke (expect 1)");
+
+        // A dialog must switch ink input off while it is open and back on afterwards.
+        log.AppendLine($"before dialog: input enabled {Presenter.IsInputEnabled}, devices {Presenter.InputDeviceTypes}");
+        var dialog = new ContentDialog { Title = "Test dialog", Content = "Ink input must be off now.", CloseButtonText = "Close" };
+        Task<ContentDialogResult> shown = ShowDialogAsync(dialog);
+        await Task.Delay(700);
+        log.AppendLine($"dialog open: input enabled {Presenter.IsInputEnabled}, devices {Presenter.InputDeviceTypes} (expect False, None)");
+        dialog.Hide();
+        await shown;
+        log.AppendLine($"dialog closed: input enabled {Presenter.IsInputEnabled}, devices {Presenter.InputDeviceTypes}");
+
+        // Deleting another page keeps unsaved work on the open one.
+        _undo.Push(new AddStrokesStep([_document.AddNew(SelfTest.MakeStroke(pen, new Point(100, 200), new Point(400, 250)))]));
+        await DeletePageAsync(beta);
+        log.AppendLine($"after deleting Beta (and its child): {TreeOutline()}; open \"{_currentPage?.Title}\" with {_document.Container.GetStrokes().Count} strokes (expect 2)");
+        await OpenPageAsync(first);
+        await OpenPageAsync(gamma);
+        log.AppendLine($"C reloaded from disk: {_document.Container.GetStrokes().Count} strokes (expect 2)");
+
+        // Leave the menu open for a screenshot.
+        BuildPageMenu(first).ShowAt(PageTree);
+        await Task.Delay(800);
     }
 
     internal async Task RunNotebookReadTestAsync(StringBuilder log)

@@ -251,9 +251,19 @@ public sealed partial class MainWindow
         _closing = true;
         _saveTimer.Stop();
         Root.Focus(FocusState.Programmatic);
-        await SaveCurrentPageAsync();
-        SaveNotebookIndex();
-        Close();
+        try
+        {
+            StopRecording();
+            await SaveCurrentPageAsync();
+            SaveNotebookIndex();
+        }
+        finally
+        {
+            // When nothing needed saving, the awaits above complete synchronously and this is still inside
+            // the Closed event that was just marked handled; a Close() made here would be swallowed with
+            // it. Close from a fresh dispatcher turn instead (_closing lets that one through).
+            DispatcherQueue.TryEnqueue(Close);
+        }
     }
 
     // ---- Page tree ------------------------------------------------------------------------------
@@ -317,9 +327,11 @@ public sealed partial class MainWindow
         return page;
     }
 
-    internal async Task<NotebookPage?> AddSubpageAsync(string? title = null)
+    /// <summary>Adds a subpage under <paramref name="parent"/> (the open page if not given) and opens it.</summary>
+    internal async Task<NotebookPage?> AddSubpageAsync(string? title = null, NotebookPage? parent = null)
     {
-        if (_currentPage is not NotebookPage parent || !_notebook.CanAddSubpage(parent))
+        parent ??= _currentPage;
+        if (parent is null || !_notebook.CanAddSubpage(parent))
         {
             StatusText.Text = "Subpages can be nested three levels deep";
             return null;
@@ -330,56 +342,172 @@ public sealed partial class MainWindow
         return page;
     }
 
+    // ---- Dialogs --------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Shows a dialog with ink input switched off. The InkCanvas takes pen and mouse input on its own
+    /// thread regardless of what XAML draws over it, so without this a click on a dialog button would be
+    /// inked onto the page underneath instead of reaching the button.
+    /// </summary>
+    internal async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
+    {
+        dialog.XamlRoot = Root.XamlRoot;
+        Presenter.IsInputEnabled = false;
+        Presenter.InputDeviceTypes = Windows.UI.Core.CoreInputDeviceTypes.None;
+        try
+        {
+            return await dialog.ShowAsync();
+        }
+        finally
+        {
+            ApplyInputDevices();
+            Presenter.IsInputEnabled = !_replaying;   // replay keeps input off until it is left
+        }
+    }
+
+    // ---- Page commands (the "…" button acts on the open page, the right-click menu on the clicked one) --
+
     private async void OnAddPageClick(object sender, RoutedEventArgs e) => await AddPageAsync();
 
     private async void OnAddSubpageClick(object sender, RoutedEventArgs e) => await AddSubpageAsync();
 
-    private async void OnRenamePageClick(object sender, RoutedEventArgs e)
+    private async void OnRenamePageClick(object sender, RoutedEventArgs e) => await RenamePageAsync(_currentPage);
+
+    private void OnMovePageUpClick(object sender, RoutedEventArgs e) => ReorderPage(_currentPage, p => _notebook.Move(p, -1));
+
+    private void OnMovePageDownClick(object sender, RoutedEventArgs e) => ReorderPage(_currentPage, p => _notebook.Move(p, 1));
+
+    private void OnDemotePageClick(object sender, RoutedEventArgs e) => ReorderPage(_currentPage, _notebook.Demote);
+
+    private void OnPromotePageClick(object sender, RoutedEventArgs e) => ReorderPage(_currentPage, _notebook.Promote);
+
+    private async void OnDeletePageClick(object sender, RoutedEventArgs e) => await ConfirmDeletePageAsync(_currentPage);
+
+    /// <summary>Right-click, pen press-and-hold or the menu key on the page list.</summary>
+    private void OnPageTreeContextRequested(UIElement sender, Microsoft.UI.Xaml.Input.ContextRequestedEventArgs args)
     {
-        if (_currentPage is not NotebookPage page)
+        if (_replaying)
         {
+            return;
+        }
+
+        NotebookPage? page = PageFromElement(args.OriginalSource as DependencyObject);
+        MenuFlyout menu = BuildPageMenu(page);
+        if (args.TryGetPosition(PageTree, out Windows.Foundation.Point position))
+        {
+            menu.ShowAt(PageTree, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions { Position = position });
+        }
+        else
+        {
+            menu.ShowAt(PageTree);
+        }
+
+        args.Handled = true;
+    }
+
+    /// <summary>The page whose row contains the element, or null for empty space in the list.</summary>
+    private NotebookPage? PageFromElement(DependencyObject? element)
+    {
+        for (; element is not null; element = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(element))
+        {
+            if (element is TreeViewItem item
+                && PageTree.NodeFromContainer(item) is TreeViewNode node
+                && _pageNodes.TryGetValue(node, out NotebookPage? page))
+            {
+                return page;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The page commands for one page; items that cannot apply to it are disabled.</summary>
+    internal MenuFlyout BuildPageMenu(NotebookPage? page)
+    {
+        var menu = new MenuFlyout();
+        void Add(string text, Action action, bool enabled = true)
+        {
+            var item = new MenuFlyoutItem { Text = text, IsEnabled = enabled };
+            item.Click += (_, _) => action();
+            menu.Items.Add(item);
+        }
+
+        if (page is null)
+        {
+            Add("New page", async () => await AddPageAsync());
+            return menu;
+        }
+
+        var siblings = _notebook.ParentOf(page)?.Children ?? _notebook.Pages;
+        int index = siblings.IndexOf(page);
+        Add("New subpage", async () => await AddSubpageAsync(parent: page), _notebook.CanAddSubpage(page));
+        Add("Rename…", async () => await RenamePageAsync(page));
+        menu.Items.Add(new MenuFlyoutSeparator());
+        Add("Move up", () => ReorderPage(page, p => _notebook.Move(p, -1)), index > 0);
+        Add("Move down", () => ReorderPage(page, p => _notebook.Move(p, 1)), index < siblings.Count - 1);
+        Add("Make subpage", () => ReorderPage(page, _notebook.Demote), _notebook.CanDemote(page));
+        Add("Promote", () => ReorderPage(page, _notebook.Promote), _notebook.ParentOf(page) is not null);
+        menu.Items.Add(new MenuFlyoutSeparator());
+        Add("Delete…", async () => await ConfirmDeletePageAsync(page));
+        return menu;
+    }
+
+    internal async Task RenamePageAsync(NotebookPage? page, string? newTitle = null)
+    {
+        if (page is null)
+        {
+            return;
+        }
+
+        if (newTitle is not null)
+        {
+            ApplyTitle(page, newTitle);
             return;
         }
 
         var box = new TextBox { Text = page.Title, SelectionStart = 0, SelectionLength = page.Title.Length };
         var dialog = new ContentDialog
         {
-            XamlRoot = Root.XamlRoot,
             Title = "Rename page",
             Content = box,
             PrimaryButtonText = "Rename",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Primary,
         };
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(box.Text))
+        if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary)
         {
-            page.Title = box.Text.Trim();
-            SaveNotebookIndex();
-            RebuildPageTree();
+            ApplyTitle(page, box.Text);
+        }
+    }
+
+    private void ApplyTitle(NotebookPage page, string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return;
+        }
+
+        page.Title = title.Trim();
+        SaveNotebookIndex();
+        RebuildPageTree();
+        if (ReferenceEquals(page, _currentPage))
+        {
             Title = "InkBoard - " + page.Title;
         }
     }
 
-    private void ReorderPage(Func<NotebookPage, bool> change)
+    internal void ReorderPage(NotebookPage? page, Func<NotebookPage, bool> change)
     {
-        if (_currentPage is NotebookPage page && change(page))
+        if (page is not null && change(page))
         {
             SaveNotebookIndex();
             RebuildPageTree();
         }
     }
 
-    private void OnMovePageUpClick(object sender, RoutedEventArgs e) => ReorderPage(p => _notebook.Move(p, -1));
-
-    private void OnMovePageDownClick(object sender, RoutedEventArgs e) => ReorderPage(p => _notebook.Move(p, 1));
-
-    private void OnDemotePageClick(object sender, RoutedEventArgs e) => ReorderPage(_notebook.Demote);
-
-    private void OnPromotePageClick(object sender, RoutedEventArgs e) => ReorderPage(_notebook.Promote);
-
-    private async void OnDeletePageClick(object sender, RoutedEventArgs e)
+    private async Task ConfirmDeletePageAsync(NotebookPage? page)
     {
-        if (_currentPage is not NotebookPage page)
+        if (page is null)
         {
             return;
         }
@@ -387,7 +515,6 @@ public sealed partial class MainWindow
         int subpages = page.Children.Count;
         var dialog = new ContentDialog
         {
-            XamlRoot = Root.XamlRoot,
             Title = $"Delete \"{page.Title}\"?",
             Content = (subpages > 0 ? "This page and all its subpages" : "This page") +
                       " will be deleted from your notebook, including ink, pictures and recording. This cannot be undone.",
@@ -395,7 +522,7 @@ public sealed partial class MainWindow
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Close,
         };
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary)
         {
             await DeletePageAsync(page);
         }
@@ -404,11 +531,18 @@ public sealed partial class MainWindow
     internal async Task DeletePageAsync(NotebookPage page)
     {
         _saveTimer.Stop();
-        _pageDirty = false;
         IReadOnlyList<NotebookPage> removed = _notebook.Remove(page);
         if (removed.Contains(_currentPage))
         {
+            // The open page is going away: nothing of it needs saving.
+            StopRecording();
+            _pageDirty = false;
             _currentPage = null;
+        }
+        else
+        {
+            // Another page is being deleted: keep any unsaved work on the open one.
+            await SaveCurrentPageAsync();
         }
 
         await _pageIo.WaitAsync();

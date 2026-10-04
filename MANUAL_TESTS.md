@@ -376,6 +376,32 @@ Known limits
 - Display capture or a different capture method must also deliver unmodified SDR colours; if OBS shows the
   page greyish instead of white, "Force SDR" is not active.
 
+## Phase 13 — Dialogs, right-click page menu, closing the window
+
+Dialogs (the bug: clicks on a dialog were inked onto the page instead)
+- [ ] "…" > Rename: click in the text field, type, click Rename and Cancel with the PEN and with the MOUSE.
+      The buttons respond and no ink appears on the page behind the dialog.
+- [ ] "…" > Delete and File > Clear this page's recording: same check for both buttons.
+- [ ] While a dialog is open, try to draw on the page next to it: nothing is drawn.
+- [ ] After the dialog closes, the pen draws again straight away; with "Draw with touch" on, touch draws
+      again too; during replay the page stays read-only.
+- [ ] If ink can still be drawn over a dialog, tell me: I will then move these confirmations into pop-up
+      menus, which have their own window.
+
+Right-click menu on page names
+- [ ] Right-click a page in the list (or press and hold with the pen): New subpage, Rename…, Move up,
+      Move down, Make subpage, Promote, Delete….
+- [ ] The commands act on the page you right-clicked, even when another page is open; the open page stays
+      open (except "New subpage", which opens the new page, and deleting the open page).
+- [ ] Items that cannot apply are greyed out: Promote on a top-level page, Move up on the first page of a
+      level, Move down on the last, Make subpage on the first, New subpage on a third-level page.
+- [ ] Right-click the empty area below the pages: "New page".
+- [ ] Delete another page while the open page has fresh ink: the open page keeps that ink.
+
+Closing
+- [ ] The window's X closes the app (it did not before), and what you drew a moment earlier is there on
+      the next start.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
