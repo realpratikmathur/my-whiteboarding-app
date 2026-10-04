@@ -131,6 +131,7 @@ public sealed partial class MainWindow
         _objectViews[obj] = CreateView(obj);
         ObjectLayer.Children.Add(_objectViews[obj]);
         PlaceView(obj);
+        LogObject(RecordedEventKind.ObjectAdd, obj);
         OnPageContentChanged();
     }
 
@@ -143,6 +144,7 @@ public sealed partial class MainWindow
 
         _objects.Remove(obj);
         ObjectLayer.Children.Remove(view);
+        LogObject(RecordedEventKind.ObjectRemove, obj);
         if (ReferenceEquals(_selectedObject, obj))
         {
             SelectObject(null);
@@ -171,6 +173,7 @@ public sealed partial class MainWindow
         {
             PlaceView(obj);
             UpdateObjectChrome();
+            LogObject(RecordedEventKind.ObjectRect, obj);
             OnPageContentChanged();
         }
     }
@@ -212,7 +215,13 @@ public sealed partial class MainWindow
 
     private void SetText(PageObject obj, string text)
     {
+        bool changed = obj.Text != text;
         obj.Text = text;
+        if (changed)
+        {
+            LogObject(RecordedEventKind.ObjectText, obj);
+        }
+
         if (_objectViews.TryGetValue(obj, out FrameworkElement? view) && view is TextBox box && box.Text != text)
         {
             box.Text = text;

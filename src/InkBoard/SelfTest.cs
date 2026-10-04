@@ -81,6 +81,12 @@ public static class SelfTest
                     case "notebook-read":
                         await window.RunNotebookReadTestAsync(log);
                         break;
+                    case "replay":
+                        await window.RunReplayTestAsync(log);
+                        break;
+                    case "replay-read":
+                        await window.RunReplayReadTestAsync(log);
+                        break;
                     case "objects":
                         await window.RunObjectsTestAsync(log);
                         break;

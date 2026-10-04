@@ -5,7 +5,7 @@
     xmlns:local="using:InkBoard"
     Title="InkBoard">
 
-    <Grid x:Name="Root" RowDefinitions="Auto,*" ColumnDefinitions="Auto,*,Auto">
+    <Grid x:Name="Root" RowDefinitions="Auto,Auto,*" ColumnDefinitions="Auto,*,Auto">
         <Grid.Resources>
             <local:CalligraphyPen x:Key="CalligraphyPen" />
         </Grid.Resources>
@@ -24,7 +24,7 @@
                     ToolTipService.ToolTip="Show or hide the page list">
                     <FontIcon FontSize="16" Glyph="&#xE700;" />
                 </ToggleButton>
-                <DropDownButton AutomationProperties.Name="File" Content="File">
+                <DropDownButton x:Name="FileButton" AutomationProperties.Name="File" Content="File">
                     <DropDownButton.Flyout>
                         <MenuFlyout Placement="Bottom">
                             <MenuFlyoutItem Click="OnOpenClick" Text="Import ink (.isf)…">
@@ -41,6 +41,8 @@
                             <MenuFlyoutSeparator />
                             <MenuFlyoutItem Click="OnInsertImageClick" Text="Insert picture…" />
                             <MenuFlyoutItem Click="OnInsertPdfClick" Text="Insert PDF…" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Click="OnClearRecordingClick" Text="Clear this page&#39;s recording…" />
                             <MenuFlyoutSeparator />
                             <MenuFlyoutItem Click="OnCutClick" Text="Cut selection">
                                 <MenuFlyoutItem.KeyboardAccelerators>
@@ -133,7 +135,24 @@
                 Margin="8,0"
                 Orientation="Horizontal"
                 Spacing="8">
-                <DropDownButton AutomationProperties.Name="Convert selection" Content="Convert">
+                <ToggleButton
+                    x:Name="RecordToggle"
+                    AutomationProperties.Name="Record"
+                    Checked="OnRecordToggled"
+                    ToolTipService.ToolTip="Record what happens on this page; press again to stop"
+                    Unchecked="OnRecordToggled">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Fill="#FFE81123" />
+                        <TextBlock x:Name="RecordLabel" Text="Record" />
+                    </StackPanel>
+                </ToggleButton>
+                <Button x:Name="ReplayButton" AutomationProperties.Name="Replay" Click="OnReplayClick">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE768;" />
+                        <TextBlock Text="Replay" />
+                    </StackPanel>
+                </Button>
+                <DropDownButton x:Name="ConvertButton" AutomationProperties.Name="Convert selection" Content="Convert">
                     <DropDownButton.Flyout>
                         <MenuFlyout Placement="Bottom">
                             <MenuFlyoutItem Click="OnInkToTextClick" Text="Ink to text" />
@@ -155,9 +174,50 @@
             </StackPanel>
         </Grid>
 
+        <!-- Replay transport, shown only while a recording is being played back. -->
+        <Grid
+            x:Name="ReplayBar"
+            Grid.Row="1"
+            Grid.ColumnSpan="3"
+            Padding="8,4"
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto"
+            ColumnSpacing="8"
+            Visibility="Collapsed">
+            <Button x:Name="PlayPauseButton" AutomationProperties.Name="Play or pause" Click="OnPlayPauseClick">
+                <FontIcon x:Name="PlayPauseIcon" FontSize="16" Glyph="&#xE768;" />
+            </Button>
+            <Button
+                Grid.Column="1"
+                AutomationProperties.Name="Restart"
+                Click="OnRestartReplayClick"
+                ToolTipService.ToolTip="Back to the start">
+                <FontIcon FontSize="16" Glyph="&#xE892;" />
+            </Button>
+            <ComboBox
+                x:Name="SpeedBox"
+                Grid.Column="2"
+                MinWidth="84"
+                AutomationProperties.Name="Playback speed"
+                SelectionChanged="OnSpeedChanged"
+                ToolTipService.ToolTip="Playback speed" />
+            <ProgressBar
+                x:Name="ReplayProgress"
+                Grid.Column="3"
+                VerticalAlignment="Center" />
+            <TextBlock
+                x:Name="ReplayTime"
+                Grid.Column="4"
+                MinWidth="90"
+                VerticalAlignment="Center"
+                TextAlignment="Right" />
+            <Button Grid.Column="5" Click="OnExitReplayClick" Content="Exit replay" />
+        </Grid>
+
         <!-- Pages and subpages. -->
         <Grid
-            Grid.Row="1"
+            x:Name="PagesPane"
+            Grid.Row="2"
             Width="240"
             Background="{ThemeResource LayerFillColorDefaultBrush}"
             RowDefinitions="Auto,*"
@@ -202,7 +262,7 @@
         <!-- Touch pans and zooms; pen and mouse go to the InkCanvas. -->
         <ScrollViewer
             x:Name="CanvasScroller"
-            Grid.Row="1"
+            Grid.Row="2"
             Grid.Column="1"
             Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
             HorizontalScrollBarVisibility="Auto"
@@ -252,7 +312,7 @@
 
         <!-- Beside the canvas, not over it: ink is composed as external content. -->
         <ScrollViewer
-            Grid.Row="1"
+            Grid.Row="2"
             Grid.Column="2"
             Width="300"
             Background="{ThemeResource LayerFillColorDefaultBrush}"

@@ -302,6 +302,40 @@ Auto-save and auto-load
 Side-by-side with OneNote
 - [ ] Build the same small page/subpage tree in both; switching pages should feel as quick.
 
+## Phase 11 — Record and replay
+
+Recording
+- [ ] Press Record (red dot, top right): the button shows "Stop 0:00" counting up. Write a few lines with the
+      pen, pausing between them; switch colour and tool; type a text box; paste a picture; erase a stroke;
+      lasso-move a word; press Ctrl+Z once. Press the button again to stop.
+- [ ] Record a second take on the same page later (even after restarting the app): it continues the same
+      lesson. Things you changed while NOT recording appear at once at the start of the next take.
+- [ ] File > Clear this page's recording asks first, then the Replay button is disabled again.
+- [ ] Switching to another page stops the recording. Each page has its own recording.
+
+Replay
+- [ ] Press Replay: a bar appears (Play, Restart, speed, progress, time, Exit replay), the page is emptied
+      and the tools are greyed out.
+- [ ] Press Play: every stroke is drawn again as you wrote it - same order, same rhythm within a stroke,
+      same pen, colour, pressure and pencil/highlighter look. Text appears as it was typed, pictures appear
+      when they were pasted, erased and moved strokes disappear/move at the right moment.
+- [ ] Pauses in your lesson longer than 2 seconds last 2 seconds in the replay.
+- [ ] The view follows the writing: it stays still while the pen is near the middle of the screen, glides
+      when the writing leaves the middle, and scrolls down the page as the lesson goes down. When the lesson
+      jumps to a far part of the page, the view gets there just before the writing starts.
+- [ ] Pause freezes everything mid-stroke; Play continues from the same point.
+- [ ] Speed 0.5x / 1x / 1.5x / 2x / 2.5x can be changed while playing.
+- [ ] Restart goes back to the empty page. Play at the end starts over.
+- [ ] Zoom before pressing Replay (for example 150%): replay keeps that zoom and still follows.
+- [ ] Exit replay: the page is exactly as it was before, at the same scroll position, and editing works.
+- [ ] Look closely at a stroke WHILE it is being redrawn: it is real ink (the platform renders the growing
+      stroke). With curve-fitted ink the tail may wiggle very slightly as it grows; tell me if it distracts.
+- [ ] A long lesson (10+ minutes, hundreds of strokes): replay stays smooth. Tell me if very long single
+      strokes stutter.
+
+Side-by-side with OneNote
+- [ ] OneNote's Ink Replay on similar handwriting: InkBoard's replay should look at least as natural.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
