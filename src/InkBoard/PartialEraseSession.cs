@@ -31,10 +31,7 @@ public sealed class PartialEraseSession(InkDocument document)
 
             IReadOnlyList<InkPoint> inkPoints = stroke.GetInkPoints();
             Matrix3x2 transform = stroke.PointTransform;
-            var positions = inkPoints
-                .Select(p => Vector2.Transform(new Vector2((float)p.Position.X, (float)p.Position.Y), transform))
-                .Select(v => new Point2(v.X, v.Y))
-                .ToList();
+            List<Point2> positions = InkDocument.CanvasPositions(stroke);
 
             IReadOnlyList<PointRange> runs = StrokeSplitter.Split(
                 positions, new Point2(from.X, from.Y), new Point2(to.X, to.Y), radius);

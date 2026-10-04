@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using InkBoard.Core;
 using Windows.Foundation;
 using Windows.UI.Input.Inking;
@@ -19,6 +20,16 @@ public sealed class InkDocument(InkStrokeContainer container) : IStrokeSurface
     private int _nextHandle = 1;
 
     public InkStrokeContainer Container { get; } = container;
+
+    /// <summary>A stroke's own ink points, placed where they appear on the canvas (PointTransform applied).</summary>
+    public static List<Point2> CanvasPositions(InkStroke stroke)
+    {
+        Matrix3x2 transform = stroke.PointTransform;
+        return stroke.GetInkPoints()
+            .Select(p => Vector2.Transform(new Vector2((float)p.Position.X, (float)p.Position.Y), transform))
+            .Select(v => new Point2(v.X, v.Y))
+            .ToList();
+    }
 
     /// <summary>Returns the handle of a stroke that is in the container, assigning one on first sight.</summary>
     public int Track(InkStroke stroke)
