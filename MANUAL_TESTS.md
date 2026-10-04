@@ -188,3 +188,38 @@ Export PNG
 
 Side-by-side with OneNote
 - [ ] Open the exported PNG next to the same ink pasted into OneNote at the same zoom: strokes look the same.
+
+## Phase 5 — Recognition
+
+Both commands are under "Convert" (top right) and act on the lasso selection.
+
+Ink to text
+- [ ] Write a word, lasso it, Convert > Ink to text: the ink is replaced by typed text at the same place and
+      roughly the same size; the status text shows what was recognised.
+- [ ] Two handwritten lines selected together become two lines of text.
+- [ ] Ctrl+Z brings the ink back and removes the text; Ctrl+Y converts again.
+- [ ] With nothing selected: status text says to select ink first. With a scribble: "No handwriting recognised".
+- [ ] Recognition language follows the Windows handwriting language; check a word in your usual language.
+- [ ] Known limits of this sample: the text box cannot be moved, edited, erased or saved to .isf.
+
+Ink to shape
+- [ ] Draw a rough rectangle, a rough ellipse/circle and a roughly straight line. Lasso all three,
+      Convert > Ink to shape: each is replaced by a clean stroke (sharp-cornered rectangle, smooth ellipse,
+      straight line) in the same colour, thickness and tool. Status text lists what was converted.
+- [ ] A rectangle drawn at an angle stays at that angle.
+- [ ] Handwriting, triangles and scribbles in the same selection are left untouched.
+- [ ] The clean shapes are real ink: the stroke eraser and point eraser work on them, lasso moves them,
+      they survive save/open and copy/paste into OneNote.
+- [ ] One Ctrl+Z restores all the hand-drawn originals.
+- [ ] Note: lines are detected by the app (a single stroke that stays close to the straight line between
+      its ends), because InkAnalyzer has no "line" shape. Tell me if it is too eager or too strict.
+
+Side-by-side with OneNote
+- [ ] Convert the same handwritten sentence with OneNote's "Ink to Text" and with InkBoard: the recognised
+      text is the same.
+- [ ] Convert the same rough rectangle and ellipse with OneNote's "Ink to Shape" and with InkBoard:
+      compare how clean the result is and whether the stroke looks like the same pen.
+
+## Phase 6 — Custom drying
+
+Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

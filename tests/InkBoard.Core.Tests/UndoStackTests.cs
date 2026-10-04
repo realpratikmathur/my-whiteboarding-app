@@ -87,6 +87,25 @@ public class UndoStackTests
     }
 
     [Fact]
+    public void Companion_actions_run_with_their_stroke_change()
+    {
+        var surface = new FakeSurface();
+        var undo = new UndoStack(surface);
+        bool textShown = true;
+        surface.Add([1]);
+        surface.Remove([1]);
+        undo.Push(new CompanionStep(new RemoveStrokesStep([1]), () => textShown = false, () => textShown = true));
+
+        undo.Undo();
+        Assert.Equal([1], surface.Live);
+        Assert.False(textShown);
+
+        undo.Redo();
+        Assert.Empty(surface.Live);
+        Assert.True(textShown);
+    }
+
+    [Fact]
     public void Steps_undo_in_reverse_order()
     {
         var surface = new FakeSurface();

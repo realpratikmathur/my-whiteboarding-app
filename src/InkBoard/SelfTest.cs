@@ -63,6 +63,17 @@ public static class SelfTest
         builder.SetDefaultDrawingAttributes(attributes);
         return builder.CreateStrokeFromInkPoints(points, Matrix3x2.Identity);
     }
+
+    public static InkStroke MakePath(InkDrawingAttributes attributes, IEnumerable<Point> positions)
+    {
+        var builder = new InkStrokeBuilder();
+        builder.SetDefaultDrawingAttributes(attributes);
+        return builder.CreateStrokeFromInkPoints(positions.Select(p => new InkPoint(p, 0.5f)), Matrix3x2.Identity);
+    }
+
+    public static IEnumerable<Point> Between(Point from, Point to, int count) =>
+        Enumerable.Range(0, count + 1).Select(i => new Point(
+            from.X + (to.X - from.X) * i / count, from.Y + (to.Y - from.Y) * i / count));
 }
 
 public sealed partial class MainWindow
@@ -185,11 +196,37 @@ public sealed partial class MainWindow
             log.AppendLine("PNG export FAILED: " + e);
         }
 
-        // 8. Leave a selection box and a zoomed view on screen for a screenshot.
+        // 8. Ink to shape on hand-drawn-looking strokes (deterministic wobble), then ink to text on the result.
+        var wobbly = Presenter.CopyDefaultDrawingAttributes();
+        wobbly.Size = new Size(4, 4);
+        Point[] corners = [new(120, 380), new(320, 384), new(316, 500), new(124, 496), new(121, 383)];
+        int rectangle = _document.AddNew(SelfTest.MakePath(wobbly, corners.SelectMany((p, i) =>
+            i == 0 ? [] : SelfTest.Between(corners[i - 1], p, 20))));
+        int ellipse = _document.AddNew(SelfTest.MakePath(wobbly, Enumerable.Range(0, 61).Select(i =>
+        {
+            double t = 2 * Math.PI * i / 58;
+            return new Point(480 + (90 + 3 * Math.Sin(5 * t)) * Math.Cos(t), 440 + (50 + 2 * Math.Cos(7 * t)) * Math.Sin(t));
+        })));
+        int line = _document.AddNew(SelfTest.MakePath(wobbly, Enumerable.Range(0, 40).Select(i =>
+            new Point(620 + i * 7, 400 + i * 1.5 + 2 * Math.Sin(i)))));
+        int beforeShapes = Count();
+        log.AppendLine("ink to shape: " + await InkToShapeAsync([rectangle, ellipse, line]));
+        log.AppendLine($"  strokes {beforeShapes} -> {Count()}; FitToCurve of results: " +
+            string.Join(",", container.GetStrokes().TakeLast(3).Select(s => s.DrawingAttributes.FitToCurve)));
+        Undo();
+        log.AppendLine($"  undo -> {Count()} strokes; redo ->");
+        Redo();
+        log.AppendLine("ink to text on shapes (expect no handwriting): " +
+            await InkToTextAsync(_document.Track(container.GetStrokes().TakeLast(3))));
+        Undo();
+        log.AppendLine($"  undo of ink to text -> {Count()} strokes, {TextLayer.Children.Count} text boxes");
+
+        // 9. Leave a selection box on screen for a screenshot.
         Rect all = container.SelectWithPolyLine(
             [new Point(60, 130), new Point(540, 130), new Point(540, 330), new Point(60, 330), new Point(60, 130)]);
         ShowSelection(all);
-        CanvasScroller.ChangeView(120, 180, 3f, disableAnimation: true);
+        float zoom = Environment.GetCommandLineArgs().Contains("--zoom3") ? 3f : 1f;
+        CanvasScroller.ChangeView(zoom == 1f ? 0 : 120, zoom == 1f ? 0 : 180, zoom, disableAnimation: true);
         await Task.Delay(1000);
         log.AppendLine($"zoom factor {CanvasScroller.ZoomFactor}");
     }

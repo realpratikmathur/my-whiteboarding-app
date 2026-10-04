@@ -52,6 +52,25 @@ public sealed record ReplaceStrokesStep(IReadOnlyList<int> RemovedIds, IReadOnly
     }
 }
 
+/// <summary>
+/// A stroke change that comes with something outside the stroke surface (for example the text box that
+/// replaces ink in "Ink to text").
+/// </summary>
+public sealed record CompanionStep(IUndoStep Inner, Action AfterUndo, Action AfterRedo) : IUndoStep
+{
+    public void Undo(IStrokeSurface surface)
+    {
+        Inner.Undo(surface);
+        AfterUndo();
+    }
+
+    public void Redo(IStrokeSurface surface)
+    {
+        Inner.Redo(surface);
+        AfterRedo();
+    }
+}
+
 public sealed class UndoStack(IStrokeSurface surface)
 {
     private readonly Stack<IUndoStep> _undo = new();
