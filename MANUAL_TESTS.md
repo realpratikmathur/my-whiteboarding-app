@@ -33,9 +33,11 @@ Pressure and tilt (ballpoint, FitToCurve on)
 Wet ink is platform-rendered
 - [ ] While drawing fast circles, ink stays glued to the pen tip with the same latency as OneNote.
 - [ ] On pen-up there is no visible flicker, shift, or change of thickness when wet ink becomes dry ink.
-- [ ] Code check: `git grep -n -i -E "PointerMoved|Polyline|PathGeometry|DrawLine" -- src/InkBoard` returns
-      nothing. The app has no drawing code; the only ink code is the presenter configuration in
-      `MainWindow.xaml.cs`.
+- [ ] Code check: `git grep -n -i -E "PointerMoved|Polyline|PathGeometry|DrawLine" -- src/InkBoard`.
+      At Phase 1 this returned nothing. From Phase 3 on, the only matches are the lasso / point-eraser
+      handlers on `InkUnprocessedInput` in `MainWindow.Tools.cs` (they select and split strokes, they do
+      not draw) and the dashed `LassoLine` selection outline in `MainWindow.xaml`. No match may ever
+      produce ink.
 
 Side-by-side with OneNote (same device, same pen)
 - [ ] Set OneNote to a black pen of about the same thickness. Write the same word in both.
@@ -92,3 +94,57 @@ Side-by-side with OneNote (same device, same pen)
 - [ ] With the debug panel at platform defaults, fast handwriting in both: latency and stroke-end behaviour
       match. Then find out whether any modeler setting makes InkBoard feel closer to, or further from, OneNote.
 - [ ] Haptic feel of pen and pencil matches OneNote's.
+
+## Phase 3 — Canvas behaviours
+
+Pan and zoom (canvas is 4000 x 3000, inside a ScrollViewer)
+- [ ] One finger pans, two fingers pinch-zoom (25% to 800%). The zoom button (top right) shows the factor
+      and resets to 100% when clicked. Mouse wheel scrolls, Ctrl + wheel zooms.
+- [ ] Pen inks while "Draw with touch" is off; a resting palm or finger never leaves ink.
+- [ ] "Draw with touch" on: a finger draws ink; off again: a finger pans.
+- [ ] Write a word at 100%, zoom to 400%+: edges stay sharp (re-rendered, not a blurry upscaled bitmap).
+      Check both right after the pinch ends and during it.
+- [ ] Write while zoomed in and while zoomed out: wet ink appears exactly under the pen tip, with the
+      correct thickness for the zoom level, and does not jump or change thickness on pen-up.
+- [ ] Scroll to the far right/bottom of the canvas and write there: ink works across the whole canvas.
+- [ ] Barrel-button erase and the ruler still work when zoomed and scrolled.
+
+Lasso selection (dashed-square button in the toolbar)
+- [ ] Drawing a loop shows a dashed blue outline that follows the pen; on pen-up a dashed box surrounds
+      the enclosed strokes. Strokes outside the loop are not selected. An empty loop selects nothing.
+- [ ] The outline and the box line up with the ink at 100% and when zoomed/scrolled.
+      (If they are offset, tell me the zoom factor and scroll position: it means unprocessed input
+      positions are not in canvas coordinates.)
+- [ ] Dragging inside the box moves the selected strokes with the pen; the box follows.
+- [ ] Delete key removes the selected strokes.
+- [ ] Switching to another tool clears the selection.
+
+Erasing
+- [ ] Eraser tool (and barrel button, and pen tail): removes whole strokes.
+- [ ] Point eraser (second eraser button): rubbing across the middle of a stroke removes only that part
+      and leaves two separate strokes. Nothing is painted white: draw a highlighter stroke underneath
+      first and confirm it is intact where the ink above it was erased.
+- [ ] Point-erase a pencil stroke, a highlighter stroke and a calligraphy stroke: the remaining pieces keep
+      their look (texture, translucency, nib angle), colour, size and pressure variation.
+- [ ] Known difference to check against OneNote: the remaining pieces are rebuilt by the platform from the
+      original pen points, so the cut ends are rounded stroke ends, and a curve-fitted stroke may shift
+      very slightly near the cut. Say if this is visible.
+
+Undo / redo (toolbar buttons, Ctrl+Z / Ctrl+Y)
+- [ ] Draw three strokes, undo three times, redo three times.
+- [ ] Erase a stroke (eraser tool), undo: it returns. Redo: it is gone.
+- [ ] "Erase all ink", undo: everything returns.
+- [ ] Lasso-move strokes, undo: they return to the old position. Redo: moved again.
+- [ ] Lasso-delete, undo.
+- [ ] Point-erase through two strokes in one gesture, undo: both originals return in one step.
+- [ ] After an undo, drawing a new stroke disables redo.
+- [ ] Known limitation: a stroke restored by undo comes back on top of the other strokes (z-order is not
+      restored). Visible only where strokes overlap, e.g. ink under a highlighter.
+- [ ] Ctrl+Z / Ctrl+Y / Delete work right after drawing with the pen (keyboard focus). If they only work
+      after clicking a toolbar button, tell me.
+
+Side-by-side with OneNote (same device, same pen)
+- [ ] Zoomed to the same factor, handwriting looks equally sharp in both.
+- [ ] Pinch-zoom and pan with ink on screen: ink tracks the fingers as smoothly as in OneNote.
+- [ ] Stroke eraser behaviour matches OneNote's stroke eraser.
+- [ ] Lasso-move a word in both: the moved ink looks identical before and after.

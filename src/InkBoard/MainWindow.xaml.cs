@@ -32,15 +32,15 @@ public sealed partial class MainWindow : Window
         ConfigureBarrelButtonErase();
         ConfigureHaptics();
         ConfigureModelerPanel();
+        ConfigureCanvasBehaviours();
+        SelfTest.RunIfRequested(this);
     }
 
     private InkPresenter Presenter => InkSurface.InkPresenter;
 
     private void ConfigureInk()
     {
-        // Default is pen only.
-        Presenter.InputDeviceTypes =
-            CoreInputDeviceTypes.Pen | CoreInputDeviceTypes.Touch | CoreInputDeviceTypes.Mouse;
+        // Input device types are set in ApplyInputDevices (pen and mouse ink; touch is optional).
 
         // Ballpoint: round tip, platform curve fitting, pressure and tilt left to the platform.
         // The InkToolbar takes over the attributes as soon as a tool is selected.
@@ -54,7 +54,11 @@ public sealed partial class MainWindow : Window
         Presenter.UpdateDefaultDrawingAttributes(attributes);
 
         Toolbar.Loaded += (_, _) => Toolbar.ActiveTool ??= BallpointButton;
-        Toolbar.ActiveToolChanged += (_, _) => OnToolbarChangedInk();
+        Toolbar.ActiveToolChanged += (_, _) =>
+        {
+            OnActiveToolChangedForCanvas();
+            OnToolbarChangedInk();
+        };
         Toolbar.InkDrawingAttributesChanged += (_, _) => OnToolbarChangedInk();
     }
 
@@ -98,10 +102,9 @@ public sealed partial class MainWindow : Window
             }
 
             _barrelErasing = barrelPressed;
-            bool eraserToolActive = Toolbar.ActiveTool?.ToolKind == InkToolbarTool.Eraser;
-            Presenter.InputProcessingConfiguration.Mode = barrelPressed || eraserToolActive
+            Presenter.InputProcessingConfiguration.Mode = barrelPressed
                 ? InkInputProcessingMode.Erasing
-                : InkInputProcessingMode.Inking;
+                : ModeForActiveTool();
             BarrelStatus.Text = barrelPressed ? "Barrel button: erasing" : "Barrel button: released";
         });
     }
