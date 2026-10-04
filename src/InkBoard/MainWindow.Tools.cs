@@ -80,6 +80,7 @@ public sealed partial class MainWindow
         Rect bounds = _document.Container.BoundingRect;
         bounds.Union(ObjectBounds());
         _contentBounds = bounds;
+        MarkPageDirty();
         UpdatePageExtent();
     }
 
