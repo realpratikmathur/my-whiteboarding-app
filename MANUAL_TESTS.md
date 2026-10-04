@@ -243,6 +243,40 @@ Side-by-side with OneNote
       the graphics card's bitmap limit).
 - [ ] Side-by-side with OneNote: writing a long page while scrolling down feels the same.
 
+## Phase 9 — Typed text, pictures and PDFs
+
+The "A" button in the toolbar is the Text and pictures tool.
+
+Typed text
+- [ ] Select the tool and tap an empty spot (pen, finger with Draw with touch, or mouse): a caret appears;
+      type a few lines with Enter. Text is black on the white page with no box around it.
+- [ ] Tap elsewhere: the text stays; a new caret starts at the new spot. Tapping without typing leaves nothing.
+- [ ] Tap an existing text: it gets a thin blue box and you can keep typing at its end. Drag it to move it.
+- [ ] Switch back to a pen and write over and around the text: ink is drawn above it.
+- [ ] Known limit: text is edited with the keyboard only (arrow keys, Shift+arrows); you cannot place the
+      caret or select words with the pen/mouse, because the ink layer owns pointer input.
+- [ ] Ink to text (Convert menu) now produces the same kind of text box: it can be moved and edited.
+
+Pictures
+- [ ] Copy a picture (Snipping Tool, a browser image) and Ctrl+V: it appears near the top-left of the view.
+- [ ] Copy an image file in File Explorer and Ctrl+V; also File > Insert picture.
+- [ ] With the Text and pictures tool: tap the picture (blue box + white square handle), drag to move, drag
+      the square handle to resize (keeps proportions), Delete to remove.
+- [ ] Draw and highlight over the picture with pen and highlighter; erase the ink again: the picture is untouched.
+
+PDFs
+- [ ] File > Insert PDF with a multi-page PDF (or copy a PDF file in Explorer and Ctrl+V): every page appears
+      as a picture, stacked downward, sharp when zoomed to 200%. The page grows to fit a long PDF.
+- [ ] Annotate the PDF pages with ink; scroll, zoom, lasso the ink.
+
+Undo
+- [ ] Ctrl+Z / Ctrl+Y step through: adding text, editing text, pasting/inserting pictures (one step per PDF
+      page), moving, resizing, deleting.
+- [ ] While the caret is in a text box, Ctrl+Z undoes typing inside that box only.
+
+Side-by-side with OneNote
+- [ ] Insert the same PDF as a printout in OneNote and annotate both: ink sits on the pages the same way.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

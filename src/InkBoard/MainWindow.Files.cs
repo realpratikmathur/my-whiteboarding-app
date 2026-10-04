@@ -158,21 +158,66 @@ public sealed partial class MainWindow
         return true;
     }
 
-    private void OnPasteClick(object sender, RoutedEventArgs e)
+    private async void OnInsertImageClick(object sender, RoutedEventArgs e)
     {
-        if (!_document.Container.CanPasteFromClipboard())
+        var picker = new FileOpenPicker(AppWindow.Id);
+        foreach (string extension in ImageExtensions)
         {
-            StatusText.Text = "No ink on the clipboard";
+            picker.FileTypeFilter.Add(extension);
+        }
+
+        await RunInsertAsync(await picker.PickSingleFileAsync());
+    }
+
+    private async void OnInsertPdfClick(object sender, RoutedEventArgs e)
+    {
+        var picker = new FileOpenPicker(AppWindow.Id);
+        picker.FileTypeFilter.Add(".pdf");
+        await RunInsertAsync(await picker.PickSingleFileAsync());
+    }
+
+    private async Task RunInsertAsync(PickFileResult? picked)
+    {
+        if (picked is null)
+        {
             return;
         }
 
+        try
+        {
+            StatusText.Text = await InsertFilesAsync([picked.Path], ViewportOrigin());
+        }
+        catch (Exception e)
+        {
+            StatusText.Text = $"{Path.GetFileName(picked.Path)}: {e.Message}";
+        }
+    }
+
+    private async void OnPasteClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Ink first (OneNote and InkBoard put ink on the clipboard), then pictures and copied files.
+            if (_document.Container.CanPasteFromClipboard())
+            {
+                PasteInk();
+            }
+            else if (!await PasteObjectsAsync())
+            {
+                StatusText.Text = "Nothing to paste (ink, pictures and PDF files only)";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Paste failed: " + ex.Message;
+        }
+    }
+
+    private void PasteInk()
+    {
         ClearSelection();
         var existing = _document.Container.GetStrokes().Select(s => s.Id).ToHashSet();
-
-        // Top-left of the visible part of the canvas, in canvas coordinates.
-        float zoom = CanvasScroller.ZoomFactor;
-        var position = new Point(CanvasScroller.HorizontalOffset / zoom + 40, CanvasScroller.VerticalOffset / zoom + 40);
-        Rect bounds = _document.Container.PasteFromClipboard(position);
+        Rect bounds = _document.Container.PasteFromClipboard(ViewportOrigin());
 
         IReadOnlyList<int> pasted = _document.Track(
             _document.Container.GetStrokes().Where(s => !existing.Contains(s.Id)));

@@ -50,6 +50,9 @@ public static class SelfTest
                     case "bigpage":
                         await window.RunBigPageTestAsync(log);
                         break;
+                    case "objects":
+                        await window.RunObjectsTestAsync(log);
+                        break;
                     default:
                         await window.RunSelfTestAsync(log);
                         break;
@@ -86,6 +89,41 @@ public static class SelfTest
         var builder = new InkStrokeBuilder();
         builder.SetDefaultDrawingAttributes(attributes);
         return builder.CreateStrokeFromInkPoints(positions.Select(p => new InkPoint(p, 0.5f)), Matrix3x2.Identity);
+    }
+
+    /// <summary>A tiny valid PDF (US Letter, one line of Helvetica per page) for testing PDF import.</summary>
+    public static string MinimalPdf(IReadOnlyList<string> pageTexts)
+    {
+        var objects = new List<string>();
+        int n = pageTexts.Count;
+        // 1 catalog, 2 pages, 3 font, then (page, content) pairs.
+        objects.Add("<< /Type /Catalog /Pages 2 0 R >>");
+        objects.Add($"<< /Type /Pages /Count {n} /Kids [{string.Join(" ", Enumerable.Range(0, n).Select(i => $"{4 + 2 * i} 0 R"))}] >>");
+        objects.Add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+        for (int i = 0; i < n; i++)
+        {
+            string content = $"BT /F1 36 Tf 72 700 Td ({pageTexts[i]}) Tj ET";
+            objects.Add($"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents {5 + 2 * i} 0 R >>");
+            objects.Add($"<< /Length {content.Length} >>\nstream\n{content}\nendstream");
+        }
+
+        var pdf = new StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (int i = 0; i < objects.Count; i++)
+        {
+            offsets.Add(pdf.Length);
+            pdf.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+
+        int xref = pdf.Length;
+        pdf.Append($"xref\n0 {objects.Count + 1}\n0000000000 65535 f \n");
+        foreach (int offset in offsets)
+        {
+            pdf.Append($"{offset:D10} 00000 n \n");
+        }
+
+        pdf.Append($"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+        return pdf.ToString();
     }
 
     public static IEnumerable<Point> Between(Point from, Point to, int count) =>
@@ -254,7 +292,7 @@ public sealed partial class MainWindow
         log.AppendLine("ink to text on shapes (expect no handwriting): " +
             await InkToTextAsync(_document.Track(container.GetStrokes().TakeLast(3))));
         Undo();
-        log.AppendLine($"  undo of ink to text -> {Count()} strokes, {TextLayer.Children.Count} text boxes");
+        log.AppendLine($"  undo of ink to text -> {Count()} strokes, {_objects.Count} text boxes");
 
         // 9. Leave a selection box on screen for a screenshot.
         Rect all = container.SelectWithPolyLine(

@@ -71,6 +71,13 @@ public sealed record CompanionStep(IUndoStep Inner, Action AfterUndo, Action Aft
     }
 }
 
+/// <summary>A change that does not involve strokes at all (text boxes, images).</summary>
+public sealed record ActionStep(Action UndoAction, Action RedoAction) : IUndoStep
+{
+    public void Undo(IStrokeSurface surface) => UndoAction();
+    public void Redo(IStrokeSurface surface) => RedoAction();
+}
+
 public sealed class UndoStack(IStrokeSurface surface)
 {
     private readonly Stack<IUndoStep> _undo = new();

@@ -77,7 +77,9 @@ public sealed partial class MainWindow
 
     private void OnPageContentChanged()
     {
-        _contentBounds = _document.Container.BoundingRect;
+        Rect bounds = _document.Container.BoundingRect;
+        bounds.Union(ObjectBounds());
+        _contentBounds = bounds;
         UpdatePageExtent();
     }
 
@@ -120,6 +122,13 @@ public sealed partial class MainWindow
         {
             ClearSelection();
         }
+
+        if (!ObjectToolActive)
+        {
+            // Ends any text edit and drops the object selection.
+            Root.Focus(FocusState.Programmatic);
+            SelectObject(null);
+        }
     }
 
     // ---- Tool input -----------------------------------------------------------------------------
@@ -129,7 +138,11 @@ public sealed partial class MainWindow
         _toolPointerDown = true;
         _lastToolPoint = position;
 
-        if (LassoActive)
+        if (ObjectToolActive)
+        {
+            OnObjectToolPressed(position);
+        }
+        else if (LassoActive)
         {
             if (_selectionBounds is Rect bounds && bounds.Contains(position))
             {
@@ -159,7 +172,11 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (_draggingSelection)
+        if (ObjectToolActive)
+        {
+            OnObjectToolMoved(position);
+        }
+        else if (_draggingSelection)
         {
             var delta = new Point(position.X - _lastToolPoint.X, position.Y - _lastToolPoint.Y);
             ShowSelection(_document.Container.MoveSelected(delta));
@@ -187,7 +204,11 @@ public sealed partial class MainWindow
 
         _toolPointerDown = false;
 
-        if (_draggingSelection)
+        if (ObjectToolActive)
+        {
+            OnObjectToolReleased();
+        }
+        else if (_draggingSelection)
         {
             _draggingSelection = false;
             if (_dragTotal != default)
@@ -312,7 +333,11 @@ public sealed partial class MainWindow
 
     private void OnDeleteInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        DeleteSelection();
+        if (!DeleteSelectedObject())
+        {
+            DeleteSelection();
+        }
+
         args.Handled = true;
     }
 
