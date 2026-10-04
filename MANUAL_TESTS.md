@@ -148,3 +148,43 @@ Side-by-side with OneNote (same device, same pen)
 - [ ] Pinch-zoom and pan with ink on screen: ink tracks the fingers as smoothly as in OneNote.
 - [ ] Stroke eraser behaviour matches OneNote's stroke eraser.
 - [ ] Lasso-move a word in both: the moved ink looks identical before and after.
+
+## Phase 4 — Persistence and OneNote interop
+
+Everything here is under the "File" button (top left) or its shortcuts.
+
+Save / open .isf
+- [ ] Draw with every tool (ballpoint with pressure, pencil with tilt, highlighter, calligraphy), then
+      File > Save ink (Ctrl+S) to a .isf file. Status text next to the undo buttons says "Saved <name>".
+- [ ] Erase all, then File > Open ink (Ctrl+O): the drawing returns, and every stroke looks exactly as before
+      (pressure variation, pencil texture and tilt shading, highlighter translucency, calligraphy nib).
+- [ ] Ctrl+Z after opening restores what was on the canvas before the file was opened.
+- [ ] Opening a file that is not ink (rename a .txt to .isf) shows an error in the status text and leaves
+      the canvas untouched.
+
+Clipboard inside InkBoard
+- [ ] Lasso some strokes, Ctrl+C, then Ctrl+V: a copy appears near the top-left of the visible area, selected
+      (dashed box) with the lasso tool active, and can be dragged straight away.
+- [ ] Ctrl+X removes the selection; Ctrl+V brings it back. Undo works for both.
+- [ ] Ctrl+C with nothing selected: status text says to select ink first.
+
+OneNote round trip (same device)
+- [ ] InkBoard to OneNote: lasso a handwritten word with strong pressure variation, Ctrl+C, paste into
+      OneNote. It arrives as ink (lasso-selectable, erasable stroke by stroke), not as a picture, with the
+      same pressure variation, colour and thickness.
+- [ ] OneNote to InkBoard: lasso ink in OneNote (pen, pencil and highlighter strokes), copy, Ctrl+V in
+      InkBoard. It arrives as strokes with pressure intact; the point eraser and stroke eraser work on it.
+- [ ] Full circle: InkBoard to OneNote, back to InkBoard, next to the original: the two look identical.
+- [ ] Note anything OneNote changes (for example pencil or calligraphy strokes arriving as plain pen):
+      that would be an ISF/clipboard format limit, not something the app can fix in app code.
+
+Export PNG
+- [ ] File > Export PNG: the image has a white background, is cropped to the ink with a small margin, and
+      is sharp (rendered at 192 DPI).
+- [ ] Compare the PNG with the canvas at 200% zoom: ballpoint, highlighter and calligraphy strokes match.
+      Look closely at PENCIL strokes: the export uses the OS dry-ink renderer (IInkD2DRenderer); tell me if
+      the pencil texture differs from what the InkCanvas shows. This matters for Phase 6.
+- [ ] Export with an empty canvas: status text says "Nothing to export".
+
+Side-by-side with OneNote
+- [ ] Open the exported PNG next to the same ink pasted into OneNote at the same zoom: strokes look the same.

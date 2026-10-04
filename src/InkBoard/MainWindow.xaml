@@ -17,6 +17,39 @@
 
         <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" Background="{ThemeResource LayerFillColorDefaultBrush}">
             <StackPanel Margin="8,0" Orientation="Horizontal" Spacing="4">
+                <DropDownButton AutomationProperties.Name="File" Content="File">
+                    <DropDownButton.Flyout>
+                        <MenuFlyout Placement="Bottom">
+                            <MenuFlyoutItem Click="OnOpenClick" Text="Open ink (.isf)…">
+                                <MenuFlyoutItem.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="O" Modifiers="Control" />
+                                </MenuFlyoutItem.KeyboardAccelerators>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Click="OnSaveClick" Text="Save ink (.isf)…">
+                                <MenuFlyoutItem.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="S" Modifiers="Control" />
+                                </MenuFlyoutItem.KeyboardAccelerators>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Click="OnExportPngClick" Text="Export PNG…" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Click="OnCutClick" Text="Cut selection">
+                                <MenuFlyoutItem.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="X" Modifiers="Control" />
+                                </MenuFlyoutItem.KeyboardAccelerators>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Click="OnCopyClick" Text="Copy selection">
+                                <MenuFlyoutItem.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="C" Modifiers="Control" />
+                                </MenuFlyoutItem.KeyboardAccelerators>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Click="OnPasteClick" Text="Paste">
+                                <MenuFlyoutItem.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="V" Modifiers="Control" />
+                                </MenuFlyoutItem.KeyboardAccelerators>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
                 <Button
                     x:Name="UndoButton"
                     AutomationProperties.Name="Undo"
@@ -31,6 +64,13 @@
                     ToolTipService.ToolTip="Redo (Ctrl+Y)">
                     <FontIcon FontSize="16" Glyph="&#xE7A6;" />
                 </Button>
+                <TextBlock
+                    x:Name="StatusText"
+                    MaxWidth="240"
+                    Margin="8,0,0,0"
+                    VerticalAlignment="Center"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextTrimming="CharacterEllipsis" />
             </StackPanel>
 
             <InkToolbar

@@ -19,6 +19,8 @@ namespace InkBoard;
 /// </summary>
 public static class SelfTest
 {
+    internal static string LogPath { get; private set; } = "";
+
     public static void RunIfRequested(MainWindow window)
     {
         string[] args = Environment.GetCommandLineArgs();
@@ -28,7 +30,7 @@ public static class SelfTest
             return;
         }
 
-        string logPath = args[index + 1];
+        string logPath = LogPath = Path.GetFullPath(args[index + 1]);
         ((FrameworkElement)window.Content).Loaded += async (_, _) =>
         {
             var log = new StringBuilder();
@@ -154,7 +156,36 @@ public sealed partial class MainWindow
         log.AppendLine($"redo stroke counts: {string.Join(",", counts)} (expect 3,3,6)");
         log.AppendLine($"events raised by programmatic changes: StrokesCollected {collected}, StrokesErased {erased}");
 
-        // 7. Leave a selection box and a zoomed view on screen for a screenshot.
+        // 7. ISF round trip and PNG export, next to the log file.
+        string folder = Path.GetDirectoryName(SelfTest.LogPath)!;
+        string isf = Path.Combine(folder, "selftest.isf"), png = Path.Combine(folder, "selftest-export.png");
+        string Describe() => string.Join(" | ", container.GetStrokes().Select(s =>
+            // ISF stores pressure as an integer level, so compare to one decimal.
+            $"{s.DrawingAttributes.Kind}/{s.GetInkPoints().Count}pts/{s.GetInkPoints()[^1].Pressure:0.0}/{s.BoundingRect.X:0},{s.BoundingRect.Y:0}"));
+        string beforeSave = Describe();
+        await SaveIsfAsync(isf);
+        log.AppendLine($"saved {new FileInfo(isf).Length} bytes of ISF");
+        await LoadIsfAsync(isf);
+        log.AppendLine($"ISF round trip identical: {beforeSave == Describe()} ({Count()} strokes)");
+        if (beforeSave != Describe())
+        {
+            log.AppendLine("  before: " + beforeSave);
+            log.AppendLine("  after:  " + Describe());
+        }
+
+        Undo();
+        log.AppendLine($"undo of open restores previous strokes: {Count()}");
+        try
+        {
+            await ExportPngAsync(png);
+            log.AppendLine($"exported PNG, {new FileInfo(png).Length} bytes");
+        }
+        catch (Exception e)
+        {
+            log.AppendLine("PNG export FAILED: " + e);
+        }
+
+        // 8. Leave a selection box and a zoomed view on screen for a screenshot.
         Rect all = container.SelectWithPolyLine(
             [new Point(60, 130), new Point(540, 130), new Point(540, 330), new Point(60, 330), new Point(60, 130)]);
         ShowSelection(all);
