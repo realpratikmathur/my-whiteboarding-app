@@ -56,10 +56,35 @@ public sealed partial class MainWindow
         Toolbar.EraseAllClicked += (_, _) => EraseAll();
 
         // Lasso and point eraser work on input the presenter leaves unprocessed (Mode = None).
-        Presenter.UnprocessedInput.PointerPressed += (_, args) => RouteToolInput(args, OnToolPressed);
-        Presenter.UnprocessedInput.PointerMoved += (_, args) => RouteToolInput(args, OnToolMoved);
-        Presenter.UnprocessedInput.PointerReleased += (_, args) => RouteToolInput(args, OnToolReleased);
-        Presenter.UnprocessedInput.PointerLost += (_, args) => RouteToolInput(args, OnToolReleased);
+        // A middle-button drag is never a tool gesture: it pans the page (MainWindow.View.cs).
+        Presenter.UnprocessedInput.PointerPressed += (_, args) =>
+            RouteToolInput(args, IsMiddleButton(args) ? BeginPan : OnToolPressed);
+        Presenter.UnprocessedInput.PointerMoved += (_, args) =>
+            RouteToolInput(args, p =>
+            {
+                if (_panning)
+                {
+                    PanTo(p);
+                }
+                else
+                {
+                    OnToolMoved(p);
+                }
+            });
+        Presenter.UnprocessedInput.PointerReleased += (_, args) => RouteToolInput(args, EndPanOrTool);
+        Presenter.UnprocessedInput.PointerLost += (_, args) => RouteToolInput(args, EndPanOrTool);
+
+        void EndPanOrTool(Point p)
+        {
+            if (_panning)
+            {
+                EndPan();
+            }
+            else
+            {
+                OnToolReleased(p);
+            }
+        }
 
         CanvasScroller.ViewChanged += (_, _) =>
         {
