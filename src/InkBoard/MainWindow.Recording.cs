@@ -113,14 +113,13 @@ public sealed partial class MainWindow
 
         var dialog = new ContentDialog
         {
-            XamlRoot = Root.XamlRoot,
             Title = "Clear this page's recording?",
             Content = "The page itself stays as it is. The recorded lesson for this page is deleted and cannot be brought back.",
             PrimaryButtonText = "Clear recording",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Close,
         };
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary)
         {
             StopRecording();
             ResetRecording();
