@@ -151,7 +151,7 @@
             VerticalScrollBarVisibility="Auto"
             VerticalScrollMode="Enabled"
             ZoomMode="Enabled">
-            <Grid Width="4000" Height="3000" Background="White">
+            <Grid x:Name="PageSurface" Width="4000" Height="3000" Background="White">
                 <!-- Text boxes produced by "Ink to text". -->
                 <Canvas x:Name="TextLayer" IsHitTestVisible="False" />
 

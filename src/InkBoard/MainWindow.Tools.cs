@@ -61,8 +61,40 @@ public sealed partial class MainWindow
         Presenter.UnprocessedInput.PointerReleased += (_, args) => RouteToolInput(args, OnToolReleased);
         Presenter.UnprocessedInput.PointerLost += (_, args) => RouteToolInput(args, OnToolReleased);
 
-        CanvasScroller.ViewChanged += (_, _) => ZoomText.Text = $"{CanvasScroller.ZoomFactor * 100:0}%";
+        CanvasScroller.ViewChanged += (_, _) =>
+        {
+            ZoomText.Text = $"{CanvasScroller.ZoomFactor * 100:0}%";
+            UpdatePageExtent();
+        };
+        CanvasScroller.SizeChanged += (_, _) => UpdatePageExtent();
+        _undo.Changed += (_, _) => OnPageContentChanged();
         ApplyInputDevices();
+    }
+
+    // ---- Endless page ---------------------------------------------------------------------------
+
+    private Rect _contentBounds;
+
+    private void OnPageContentChanged()
+    {
+        _contentBounds = _document.Container.BoundingRect;
+        UpdatePageExtent();
+    }
+
+    /// <summary>Extends the page to the right and downward so it never runs out; see <see cref="PageExtent"/>.</summary>
+    private void UpdatePageExtent()
+    {
+        float zoom = CanvasScroller.ZoomFactor;
+        double viewWidth = CanvasScroller.ViewportWidth / zoom, viewHeight = CanvasScroller.ViewportHeight / zoom;
+        double width = PageExtent.Grow(
+            PageSurface.Width, _contentBounds.Right, CanvasScroller.HorizontalOffset / zoom + viewWidth, viewWidth, PageExtent.MinWidth);
+        double height = PageExtent.Grow(
+            PageSurface.Height, _contentBounds.Bottom, CanvasScroller.VerticalOffset / zoom + viewHeight, viewHeight, PageExtent.MinHeight);
+        if (width != PageSurface.Width || height != PageSurface.Height)
+        {
+            PageSurface.Width = width;
+            PageSurface.Height = height;
+        }
     }
 
     private void RouteToolInput(PointerEventArgs args, System.Action<Point> handler)

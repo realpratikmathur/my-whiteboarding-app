@@ -230,6 +230,19 @@ Side-by-side with OneNote
 - [ ] Side-by-side with OneNote: pick the matching pen colours and the yellow/green/pink highlighters in
       both; tell me any colour you use in OneNote that is missing or looks off.
 
+## Phase 8 — Endless page
+
+- [ ] Scroll (finger, wheel or scrollbar) to the bottom and keep going: the page keeps extending downward;
+      you never hit an end. Same to the right.
+- [ ] Write near the bottom edge of the visible area, scroll down, keep writing, repeat many times: ink
+      always lands under the pen and old ink stays where it was.
+- [ ] After going far down (tens of screens), zoom in and out and write: still crisp, same latency as at
+      the top of the page.
+- [ ] Lasso, point eraser, ruler and undo work far down the page.
+- [ ] Export PNG of a very tall page: if it fails, tell me the status text (very tall images can exceed
+      the graphics card's bitmap limit).
+- [ ] Side-by-side with OneNote: writing a long page while scrolling down feels the same.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
