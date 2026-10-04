@@ -92,6 +92,17 @@ public sealed partial class MainWindow
         await RunFileCommandAsync(await picker.PickSaveFileAsync(), ExportPngAsync, "Exported");
     }
 
+    private async void OnSaveObsLutClick(object sender, RoutedEventArgs e)
+    {
+        var picker = new FileSavePicker(AppWindow.Id)
+        {
+            SuggestedFileName = "InkBoard-hide-private-ink",
+            DefaultFileExtension = ".png",
+        };
+        picker.FileTypeChoices.Add("OBS LUT image", [".png"]);
+        await RunFileCommandAsync(await picker.PickSaveFileAsync(), PrivateInk.SaveObsLutAsync, "Saved OBS filter file");
+    }
+
     private async Task RunFileCommandAsync(PickFileResult? picked, Func<string, Task> command, string verb)
     {
         if (picked is null)

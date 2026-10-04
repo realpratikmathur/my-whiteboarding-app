@@ -59,6 +59,7 @@ public sealed partial class MainWindow : Window
         BallpointButton.Palette = InkPalettes.ToBrushes(InkPalettes.Pens);
         PencilButton.Palette = InkPalettes.ToBrushes(InkPalettes.Pens);
         CalligraphyButton.Palette = InkPalettes.ToBrushes(InkPalettes.Pens);
+        PrivatePenButton.Palette = InkPalettes.ToBrushes([PrivateInk.Color]);
         HighlighterButton.Palette = InkPalettes.ToBrushes(InkPalettes.Highlighters);
 
         Toolbar.Loaded += (_, _) => Toolbar.ActiveTool ??= BallpointButton;

@@ -336,6 +336,46 @@ Replay
 Side-by-side with OneNote
 - [ ] OneNote's Ink Replay on similar handwriting: InkBoard's replay should look at least as natural.
 
+## Phase 12 — Private notes hidden from OBS
+
+Private notes are pure magenta (#FF00FF). They are for your eyes only: OBS removes them from the video,
+they are never recorded, and during replay they stay on the page the whole time.
+
+In the app
+- [ ] The padlock pen in the toolbar writes magenta; its flyout offers only that colour and a size.
+- [ ] "Private text" (top right) on: new text boxes are magenta. Off: black again.
+- [ ] No other pen or highlighter palette contains pure magenta.
+- [ ] Record a lesson in which you also write private notes (pen and text). Replay: the private notes are on
+      the page from the first moment and never move or disappear, while the regular ink plays back.
+- [ ] Erase or move a private note while recording: nothing about it shows up in the replay.
+
+OBS setup (once)
+1. In OBS add a Window Capture source for InkBoard (Capture method: Windows 10 (1903 and up)).
+   In the source's properties tick "Force SDR". This matters on your HDR monitors: without it OBS
+   tone-maps the capture, colours shift and the filter cannot match them.
+2. Right-click the source > Filters > "+" under Effect Filters > "Apply LUT".
+3. Path: `obs\InkBoard-hide-private-ink.png` from this repo (or File > Save OBS filter file in InkBoard
+   to write a fresh copy anywhere). Amount: 1.0.
+That is all: no colour key, no chroma key, no extra colour source.
+
+Check in OBS
+- [ ] In the OBS preview the private notes are gone and the page is plain white where they are; every other
+      ink colour, pencil, highlighter, text, picture and the toolbar look unchanged.
+- [ ] Record a short clip while replaying a lesson with private notes on the page, then play the file:
+      regular ink appears as it replays, private notes never appear. Compare with
+      `obs\verification-without-filter.png` and `obs\verification-with-filter.png` (frames from my test).
+- [ ] Zoom the page to 200% and 50% and check the preview again (edge pixels change with zoom).
+- [ ] With the real pen: write private notes thin and thick, fast and slow; look for any faint magenta
+      outline in the recording. If you see one, tell me the zoom level and pen size.
+
+Known limits
+- Keep private notes on blank page. Where a private note crosses regular ink, a picture or a PDF, the
+  video shows white there instead of what is underneath (the filter turns magenta into white).
+- The filter also removes pure magenta, and only pure magenta and its pale tints, inside pictures and PDFs.
+- If you turn the filter off or record with another tool, the notes are visible.
+- Display capture or a different capture method must also deliver unmodified SDR colours; if OBS shows the
+  page greyish instead of white, "Force SDR" is not active.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
