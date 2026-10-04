@@ -37,7 +37,18 @@ public static class SelfTest
             try
             {
                 await Task.Delay(1500);
-                await window.RunSelfTestAsync(log);
+                int flyout = Array.IndexOf(args, "--flyout");
+                if (flyout >= 0)
+                {
+                    // Opens a tool's configuration flyout so a screenshot can show whether it renders.
+                    window.OpenToolFlyout(args[flyout + 1], log);
+                    await Task.Delay(1500);
+                }
+                else
+                {
+                    await window.RunSelfTestAsync(log);
+                }
+
                 log.AppendLine("DONE");
             }
             catch (Exception e)
@@ -78,6 +89,24 @@ public static class SelfTest
 
 public sealed partial class MainWindow
 {
+    internal void OpenToolFlyout(string tool, StringBuilder log)
+    {
+        Microsoft.UI.Xaml.Controls.InkToolbarToolButton button = tool switch
+        {
+            "pencil" => PencilButton,
+            "highlighter" => HighlighterButton,
+            "calligraphy" => CalligraphyButton,
+            _ => BallpointButton,
+        };
+        Toolbar.ActiveTool = button;
+        var peer = Microsoft.UI.Xaml.Automation.Peers.FrameworkElementAutomationPeer.CreatePeerForElement(button);
+        var expand = peer.GetPattern(Microsoft.UI.Xaml.Automation.Peers.PatternInterface.ExpandCollapse)
+            as Microsoft.UI.Xaml.Automation.Provider.IExpandCollapseProvider;
+        log.AppendLine($"flyout for {tool}: expand pattern {(expand is null ? "missing" : "found")}");
+        expand?.Expand();
+        log.AppendLine($"  state {expand?.ExpandCollapseState}");
+    }
+
     internal async Task RunSelfTestAsync(StringBuilder log)
     {
         int collected = 0, erased = 0;

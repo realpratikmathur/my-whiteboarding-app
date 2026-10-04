@@ -220,6 +220,16 @@ Side-by-side with OneNote
 - [ ] Convert the same rough rectangle and ellipse with OneNote's "Ink to Shape" and with InkBoard:
       compare how clean the result is and whether the stroke looks like the same pen.
 
-## Phase 6 — Custom drying
+## Phase 7 — Ink and highlighter colours
+
+- [ ] Tap the selected ballpoint, pencil or calligraphy pen again: the flyout shows 22 colours (black and
+      greys, reds, orange, gold, browns, greens, teal, blues, navy, purple, lavender, pinks) and a size slider.
+- [ ] Tap the selected highlighter again: 9 highlighter colours (yellow, green, turquoise, pink, orange,
+      lavender, red, blue, grey).
+- [ ] Each tool remembers its own colour and size when you switch tools and come back.
+- [ ] Side-by-side with OneNote: pick the matching pen colours and the yellow/green/pink highlighters in
+      both; tell me any colour you use in OneNote that is missing or looks off.
+
+## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
