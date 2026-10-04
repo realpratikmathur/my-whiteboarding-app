@@ -5,7 +5,7 @@
     xmlns:local="using:InkBoard"
     Title="InkBoard">
 
-    <Grid x:Name="Root" RowDefinitions="Auto,*" ColumnDefinitions="*,Auto">
+    <Grid x:Name="Root" RowDefinitions="Auto,*" ColumnDefinitions="Auto,*,Auto">
         <Grid.Resources>
             <local:CalligraphyPen x:Key="CalligraphyPen" />
         </Grid.Resources>
@@ -15,17 +15,24 @@
             <KeyboardAccelerator Key="Delete" Invoked="OnDeleteInvoked" />
         </Grid.KeyboardAccelerators>
 
-        <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <Grid Grid.ColumnSpan="3" ColumnDefinitions="Auto,*,Auto" Background="{ThemeResource LayerFillColorDefaultBrush}">
             <StackPanel Margin="8,0" Orientation="Horizontal" Spacing="4">
+                <ToggleButton
+                    x:Name="PagesToggle"
+                    AutomationProperties.Name="Pages"
+                    IsChecked="True"
+                    ToolTipService.ToolTip="Show or hide the page list">
+                    <FontIcon FontSize="16" Glyph="&#xE700;" />
+                </ToggleButton>
                 <DropDownButton AutomationProperties.Name="File" Content="File">
                     <DropDownButton.Flyout>
                         <MenuFlyout Placement="Bottom">
-                            <MenuFlyoutItem Click="OnOpenClick" Text="Open ink (.isf)…">
+                            <MenuFlyoutItem Click="OnOpenClick" Text="Import ink (.isf)…">
                                 <MenuFlyoutItem.KeyboardAccelerators>
                                     <KeyboardAccelerator Key="O" Modifiers="Control" />
                                 </MenuFlyoutItem.KeyboardAccelerators>
                             </MenuFlyoutItem>
-                            <MenuFlyoutItem Click="OnSaveClick" Text="Save ink (.isf)…">
+                            <MenuFlyoutItem Click="OnSaveClick" Text="Export ink (.isf)…">
                                 <MenuFlyoutItem.KeyboardAccelerators>
                                     <KeyboardAccelerator Key="S" Modifiers="Control" />
                                 </MenuFlyoutItem.KeyboardAccelerators>
@@ -148,10 +155,55 @@
             </StackPanel>
         </Grid>
 
+        <!-- Pages and subpages. -->
+        <Grid
+            Grid.Row="1"
+            Width="240"
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            RowDefinitions="Auto,*"
+            Visibility="{x:Bind PagesToggle.IsChecked, Mode=OneWay}">
+            <StackPanel Margin="8,8,8,4" Orientation="Horizontal" Spacing="4">
+                <Button Click="OnAddPageClick" ToolTipService.ToolTip="New page">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE710;" />
+                        <TextBlock Text="Page" />
+                    </StackPanel>
+                </Button>
+                <Button Click="OnAddSubpageClick" ToolTipService.ToolTip="New subpage of the selected page">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE710;" />
+                        <TextBlock Text="Subpage" />
+                    </StackPanel>
+                </Button>
+                <Button AutomationProperties.Name="Page options" ToolTipService.ToolTip="Rename, move or delete the selected page">
+                    <FontIcon FontSize="14" Glyph="&#xE712;" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Click="OnRenamePageClick" Text="Rename…" />
+                            <MenuFlyoutItem Click="OnMovePageUpClick" Text="Move up" />
+                            <MenuFlyoutItem Click="OnMovePageDownClick" Text="Move down" />
+                            <MenuFlyoutItem Click="OnDemotePageClick" Text="Make subpage" />
+                            <MenuFlyoutItem Click="OnPromotePageClick" Text="Promote" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Click="OnDeletePageClick" Text="Delete…" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+            <TreeView
+                x:Name="PageTree"
+                Grid.Row="1"
+                CanDragItems="False"
+                CanReorderItems="False"
+                ItemInvoked="OnPageInvoked"
+                SelectionMode="Single" />
+        </Grid>
+
         <!-- Touch pans and zooms; pen and mouse go to the InkCanvas. -->
         <ScrollViewer
             x:Name="CanvasScroller"
             Grid.Row="1"
+            Grid.Column="1"
             Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}"
             HorizontalScrollBarVisibility="Auto"
             HorizontalScrollMode="Enabled"
@@ -201,7 +253,7 @@
         <!-- Beside the canvas, not over it: ink is composed as external content. -->
         <ScrollViewer
             Grid.Row="1"
-            Grid.Column="1"
+            Grid.Column="2"
             Width="300"
             Background="{ThemeResource LayerFillColorDefaultBrush}"
             Visibility="{x:Bind DebugToggle.IsChecked, Mode=OneWay}">

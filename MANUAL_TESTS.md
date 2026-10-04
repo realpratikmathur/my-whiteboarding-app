@@ -277,6 +277,31 @@ Undo
 Side-by-side with OneNote
 - [ ] Insert the same PDF as a printout in OneNote and annotate both: ink sits on the pages the same way.
 
+## Phase 10 — Pages, subpages, auto-save
+
+Your notebook lives in `Documents\InkBoard`. The list button (top left) shows/hides the page list.
+
+Pages
+- [ ] First start: one page, "Page 1". "+ Page" adds a page at the end and opens it (empty).
+- [ ] "+ Subpage" adds a subpage under the open page, indented; a subpage can have its own subpage
+      (three levels, like OneNote); a fourth level is refused with a message.
+- [ ] Tap pages in the list to switch: each shows its own ink, text and pictures. Undo history starts fresh
+      on each switch.
+- [ ] "…" > Rename, Move up, Move down, Make subpage, Promote behave as in OneNote's page list.
+- [ ] "…" > Delete asks for confirmation, then removes the page and its subpages. Deleting the last page
+      leaves a fresh "Page 1".
+
+Auto-save and auto-load
+- [ ] Draw, type and paste on two or three pages. Close the window with the X. Start InkBoard again: the
+      same page is open, with everything on it, and the other pages are intact (pressure, pencil texture,
+      highlighter, text, pictures, PDF pages, page length).
+- [ ] Draw something and, without doing anything else, wait about 3 seconds, then end the app from Task
+      Manager. Start again: the drawing is there (auto-save runs 2 seconds after the last change).
+- [ ] File > Export ink / Import ink still write and read a single .isf file for the open page.
+
+Side-by-side with OneNote
+- [ ] Build the same small page/subpage tree in both; switching pages should feel as quick.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

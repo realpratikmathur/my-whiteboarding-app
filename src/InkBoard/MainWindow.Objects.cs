@@ -202,6 +202,7 @@ public sealed partial class MainWindow
         if (obj.Text != box.Text)
         {
             obj.Text = box.Text;
+            MarkPageDirty();
             OnObjectTextTyped(obj);
         }
     }

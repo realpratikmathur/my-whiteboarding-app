@@ -21,6 +21,30 @@ public static class SelfTest
 {
     internal static string LogPath { get; private set; } = "";
 
+    private static readonly Lazy<string?> NotebookOverride = new(() =>
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        int index = Array.IndexOf(args, "--selftest");
+        if (index < 0 || index + 1 >= args.Length)
+        {
+            return null;
+        }
+
+        // Self-tests never touch the real notebook: they use a scratch one next to the log, wiped on every
+        // run except the "-read" scenarios, which check what an earlier run saved.
+        string folder = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(args[index + 1]))!, "selftest-notebook");
+        bool keep = args.Length > index + 2 && args[index + 2].EndsWith("-read", StringComparison.Ordinal);
+        if (!keep && Directory.Exists(folder))
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+
+        return folder;
+    });
+
+    /// <summary>Notebook folder to use instead of DocumentsInkBoard while self-testing; null otherwise.</summary>
+    internal static string? NotebookFolderOverride => NotebookOverride.Value;
+
     public static void RunIfRequested(MainWindow window)
     {
         string[] args = Environment.GetCommandLineArgs();
@@ -36,7 +60,8 @@ public static class SelfTest
             var log = new StringBuilder();
             try
             {
-                await Task.Delay(1500);
+                await window.NotebookReady;
+                await Task.Delay(800);
                 // --selftest <log> [scenario] [scenario argument]
                 string scenario = args.Length > index + 2 ? args[index + 2] : "core";
                 string argument = args.Length > index + 3 ? args[index + 3] : "";
@@ -49,6 +74,12 @@ public static class SelfTest
                         break;
                     case "bigpage":
                         await window.RunBigPageTestAsync(log);
+                        break;
+                    case "notebook-write":
+                        await window.RunNotebookWriteTestAsync(log);
+                        break;
+                    case "notebook-read":
+                        await window.RunNotebookReadTestAsync(log);
                         break;
                     case "objects":
                         await window.RunObjectsTestAsync(log);
