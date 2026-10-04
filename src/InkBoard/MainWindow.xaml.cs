@@ -53,6 +53,11 @@ public sealed partial class MainWindow : Window
         attributes.IgnoreTilt = false;
         Presenter.UpdateDefaultDrawingAttributes(attributes);
 
+        BallpointButton.Palette = InkPalettes.ToBrushes(InkPalettes.Pens);
+        PencilButton.Palette = InkPalettes.ToBrushes(InkPalettes.Pens);
+        CalligraphyButton.Palette = InkPalettes.ToBrushes(InkPalettes.Pens);
+        HighlighterButton.Palette = InkPalettes.ToBrushes(InkPalettes.Highlighters);
+
         Toolbar.Loaded += (_, _) => Toolbar.ActiveTool ??= BallpointButton;
         Toolbar.ActiveToolChanged += (_, _) =>
         {

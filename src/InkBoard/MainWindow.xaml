@@ -81,9 +81,10 @@
                 InitialControls="None"
                 TargetInkCanvas="{x:Bind InkSurface}">
                 <InkToolbarBallpointPenButton x:Name="BallpointButton" />
-                <InkToolbarPencilButton />
-                <InkToolbarHighlighterButton />
+                <InkToolbarPencilButton x:Name="PencilButton" />
+                <InkToolbarHighlighterButton x:Name="HighlighterButton" />
                 <InkToolbarCustomPenButton
+                    x:Name="CalligraphyButton"
                     AutomationProperties.Name="Calligraphy pen"
                     CustomPen="{StaticResource CalligraphyPen}"
                     MaxStrokeWidth="24"
