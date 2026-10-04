@@ -2,10 +2,94 @@
     x:Class="InkBoard.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:InkBoard"
     Title="InkBoard">
 
-    <!-- Wet and dry ink are both rendered by the platform InkCanvas. The app draws nothing itself. -->
-    <Grid Background="White">
-        <InkCanvas x:Name="InkSurface" AutomationProperties.Name="Whiteboard" />
+    <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,Auto">
+        <Grid.Resources>
+            <local:CalligraphyPen x:Key="CalligraphyPen" />
+        </Grid.Resources>
+
+        <Grid Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <InkToolbar
+                x:Name="Toolbar"
+                HorizontalAlignment="Center"
+                AutomationProperties.Name="Ink tools"
+                InitialControls="None"
+                TargetInkCanvas="{x:Bind InkSurface}">
+                <InkToolbarBallpointPenButton x:Name="BallpointButton" />
+                <InkToolbarPencilButton />
+                <InkToolbarHighlighterButton />
+                <InkToolbarCustomPenButton
+                    AutomationProperties.Name="Calligraphy pen"
+                    CustomPen="{StaticResource CalligraphyPen}"
+                    MaxStrokeWidth="24"
+                    MinStrokeWidth="4"
+                    SelectedStrokeWidth="10"
+                    ToolTipService.ToolTip="Calligraphy pen">
+                    <FontIcon Glyph="&#xEDFB;" />
+                    <InkToolbarCustomPenButton.ConfigurationContent>
+                        <InkToolbarPenConfigurationControl />
+                    </InkToolbarCustomPenButton.ConfigurationContent>
+                </InkToolbarCustomPenButton>
+                <InkToolbarEraserButton />
+                <InkToolbarStencilButton />
+            </InkToolbar>
+            <ToggleButton
+                x:Name="DebugToggle"
+                Grid.Column="1"
+                Margin="8,0"
+                VerticalAlignment="Center"
+                Content="Debug" />
+        </Grid>
+
+        <!-- Wet and dry ink are both rendered by the platform InkCanvas. The app draws nothing itself. -->
+        <Grid Grid.Row="1" Background="White">
+            <InkCanvas x:Name="InkSurface" AutomationProperties.Name="Whiteboard" />
+        </Grid>
+
+        <!-- Beside the canvas, not over it: ink is composed as external content. -->
+        <ScrollViewer
+            Grid.Row="1"
+            Grid.Column="1"
+            Width="300"
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            Visibility="{x:Bind DebugToggle.IsChecked, Mode=OneWay}">
+            <StackPanel Padding="16" Spacing="12">
+                <TextBlock Style="{ThemeResource BodyStrongTextBlockStyle}" Text="Ink modeler (A/B against OneNote)" />
+                <Slider
+                    x:Name="PredictionSlider"
+                    Header="Prediction time (ms)"
+                    Maximum="20"
+                    Minimum="0"
+                    StepFrequency="1"
+                    ValueChanged="OnModelerSettingChanged" />
+                <NumberBox
+                    x:Name="ScalingBox"
+                    Header="Scaling factor"
+                    LargeChange="1"
+                    Minimum="0.01"
+                    SmallChange="0.1"
+                    SpinButtonPlacementMode="Inline"
+                    ValueChanged="OnScalingChanged" />
+                <ToggleSwitch
+                    x:Name="VelocityPressureSwitch"
+                    Header="Velocity-based pressure"
+                    Toggled="OnModelerSettingChanged" />
+                <Button Click="OnResetModelerClick" Content="Reset to platform defaults" />
+                <TextBlock
+                    x:Name="ModelerStatus"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextWrapping="Wrap" />
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    Style="{ThemeResource BodyStrongTextBlockStyle}"
+                    Text="Diagnostics" />
+                <TextBlock x:Name="ToolStatus" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="Wrap" />
+                <TextBlock x:Name="HapticsStatus" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="Wrap" />
+                <TextBlock x:Name="BarrelStatus" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>
