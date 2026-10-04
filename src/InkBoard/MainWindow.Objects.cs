@@ -54,6 +54,9 @@ public sealed partial class MainWindow
 
     private bool ObjectToolActive => ReferenceEquals(Toolbar.ActiveTool, TextButton);
 
+    private void OnPrivateTextChanged(object sender, RoutedEventArgs e) =>
+        _textColor = PrivateTextToggle.IsChecked == true ? PrivateInk.Hex : "000000";
+
     // ---- Views ----------------------------------------------------------------------------------
 
     private static Windows.UI.Color ParseColor(string rrggbb)

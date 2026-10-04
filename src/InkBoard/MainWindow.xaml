@@ -8,6 +8,7 @@
     <Grid x:Name="Root" RowDefinitions="Auto,Auto,*" ColumnDefinitions="Auto,*,Auto">
         <Grid.Resources>
             <local:CalligraphyPen x:Key="CalligraphyPen" />
+            <local:PrivatePen x:Key="PrivatePen" />
         </Grid.Resources>
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="Z" Invoked="OnUndoInvoked" Modifiers="Control" />
@@ -42,6 +43,7 @@
                             <MenuFlyoutItem Click="OnInsertImageClick" Text="Insert picture…" />
                             <MenuFlyoutItem Click="OnInsertPdfClick" Text="Insert PDF…" />
                             <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Click="OnSaveObsLutClick" Text="Save OBS filter file (hides private notes)…" />
                             <MenuFlyoutItem Click="OnClearRecordingClick" Text="Clear this page&#39;s recording…" />
                             <MenuFlyoutSeparator />
                             <MenuFlyoutItem Click="OnCutClick" Text="Cut selection">
@@ -108,6 +110,19 @@
                         <InkToolbarPenConfigurationControl />
                     </InkToolbarCustomPenButton.ConfigurationContent>
                 </InkToolbarCustomPenButton>
+                <InkToolbarCustomPenButton
+                    x:Name="PrivatePenButton"
+                    AutomationProperties.Name="Private notes pen"
+                    CustomPen="{StaticResource PrivatePen}"
+                    MaxStrokeWidth="12"
+                    MinStrokeWidth="2"
+                    SelectedStrokeWidth="4"
+                    ToolTipService.ToolTip="Private notes pen: removed from the video by the OBS colour key, never recorded or replayed">
+                    <FontIcon Glyph="&#xE72E;" />
+                    <InkToolbarCustomPenButton.ConfigurationContent>
+                        <InkToolbarPenConfigurationControl />
+                    </InkToolbarCustomPenButton.ConfigurationContent>
+                </InkToolbarCustomPenButton>
                 <InkToolbarEraserButton />
                 <InkToolbarCustomToolButton
                     x:Name="PointEraserButton"
@@ -160,6 +175,17 @@
                         </MenuFlyout>
                     </DropDownButton.Flyout>
                 </DropDownButton>
+                <ToggleButton
+                    x:Name="PrivateTextToggle"
+                    AutomationProperties.Name="Private text"
+                    Checked="OnPrivateTextChanged"
+                    ToolTipService.ToolTip="New text boxes are private notes: removed from the video by the OBS colour key, never recorded or replayed"
+                    Unchecked="OnPrivateTextChanged">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE72E;" />
+                        <TextBlock Text="Private text" />
+                    </StackPanel>
+                </ToggleButton>
                 <ToggleButton
                     x:Name="DrawWithTouchToggle"
                     Checked="OnDrawWithTouchChanged"

@@ -81,6 +81,12 @@ public static class SelfTest
                     case "notebook-read":
                         await window.RunNotebookReadTestAsync(log);
                         break;
+                    case "obs-chart":
+                        await window.RunObsChartAsync(log, argument);
+                        break;
+                    case "obs-final":
+                        await window.RunObsFinalAsync(log);
+                        break;
                     case "replay":
                         await window.RunReplayTestAsync(log);
                         break;
