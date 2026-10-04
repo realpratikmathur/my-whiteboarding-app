@@ -32,6 +32,9 @@
                             </MenuFlyoutItem>
                             <MenuFlyoutItem Click="OnExportPngClick" Text="Export PNG…" />
                             <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Click="OnInsertImageClick" Text="Insert picture…" />
+                            <MenuFlyoutItem Click="OnInsertPdfClick" Text="Insert PDF…" />
+                            <MenuFlyoutSeparator />
                             <MenuFlyoutItem Click="OnCutClick" Text="Cut selection">
                                 <MenuFlyoutItem.KeyboardAccelerators>
                                     <KeyboardAccelerator Key="X" Modifiers="Control" />
@@ -109,6 +112,12 @@
                     ToolTipService.ToolTip="Lasso select (drag inside the selection to move, Delete to remove)">
                     <FontIcon Glyph="&#xEF20;" />
                 </InkToolbarCustomToolButton>
+                <InkToolbarCustomToolButton
+                    x:Name="TextButton"
+                    AutomationProperties.Name="Text and pictures"
+                    ToolTipService.ToolTip="Text and pictures (tap to type; tap a text box or picture to select, drag to move)">
+                    <FontIcon Glyph="&#xE8D2;" />
+                </InkToolbarCustomToolButton>
                 <InkToolbarStencilButton />
             </InkToolbar>
 
@@ -152,8 +161,8 @@
             VerticalScrollMode="Enabled"
             ZoomMode="Enabled">
             <Grid x:Name="PageSurface" Width="4000" Height="3000" Background="White">
-                <!-- Text boxes produced by "Ink to text". -->
-                <Canvas x:Name="TextLayer" IsHitTestVisible="False" />
+                <!-- Text boxes and pictures (pasted images, PDF pages). Ink is drawn above them. -->
+                <Canvas x:Name="ObjectLayer" />
 
                 <!-- Wet and dry ink are both rendered by the platform InkCanvas. The app draws no ink. -->
                 <InkCanvas x:Name="InkSurface" AutomationProperties.Name="Whiteboard" />
@@ -164,6 +173,19 @@
                         x:Name="LassoLine"
                         Stroke="#FF0A64D8"
                         StrokeDashArray="4,3"
+                        StrokeThickness="1.5"
+                        Visibility="Collapsed" />
+                    <Rectangle
+                        x:Name="ObjectSelectionRect"
+                        Stroke="#FF0A64D8"
+                        StrokeThickness="1.5"
+                        Visibility="Collapsed" />
+                    <Rectangle
+                        x:Name="ResizeHandle"
+                        Width="18"
+                        Height="18"
+                        Fill="White"
+                        Stroke="#FF0A64D8"
                         StrokeThickness="1.5"
                         Visibility="Collapsed" />
                     <Rectangle

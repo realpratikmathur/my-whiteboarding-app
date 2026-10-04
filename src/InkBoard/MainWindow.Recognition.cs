@@ -78,22 +78,22 @@ public sealed partial class MainWindow
             a.Union(b);
             return a;
         });
-        var textBlock = new TextBlock
+        var text = new PageObject
         {
-            Text = string.Join("\n", lines),
+            Kind = PageObjectKind.Text,
+            Text = string.Join("\r", lines),
             FontSize = Math.Max(12, bounds.Height / lines.Count * 0.7),
-            Foreground = new SolidColorBrush(Colors.Black),
+            X = bounds.X,
+            Y = bounds.Y,
         };
-        Canvas.SetLeft(textBlock, bounds.X);
-        Canvas.SetTop(textBlock, bounds.Y);
 
         ClearSelection();
         _document.Remove(handles);
-        TextLayer.Children.Add(textBlock);
+        ShowObject(text);
         _undo.Push(new CompanionStep(
             new RemoveStrokesStep(handles),
-            AfterUndo: () => TextLayer.Children.Remove(textBlock),
-            AfterRedo: () => TextLayer.Children.Add(textBlock)));
+            AfterUndo: () => HideObject(text),
+            AfterRedo: () => ShowObject(text)));
 
         return "Recognised: " + string.Join(" / ", lines);
     }
