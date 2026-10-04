@@ -1,0 +1,11 @@
+<Window
+    x:Class="InkBoard.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="InkBoard">
+
+    <!-- Wet and dry ink are both rendered by the platform InkCanvas. The app draws nothing itself. -->
+    <Grid Background="White">
+        <InkCanvas x:Name="InkSurface" AutomationProperties.Name="Whiteboard" />
+    </Grid>
+</Window>
