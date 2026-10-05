@@ -155,7 +155,7 @@ public sealed partial class MainWindow
         _drawing.Clear();
         _nextItem = 0;
         _cameraTarget = null;
-        _camera = new CameraFollower();
+        _camera = new CameraFollower(FollowMode);
         _clock = new ReplayClock(_timeline.Length) { Speed = ReplayClock.Speeds[Math.Max(0, SpeedBox.SelectedIndex)] };
         CanvasScroller.ChangeView(0, 0, null, disableAnimation: true);
         UpdateReplayBar();
@@ -166,6 +166,25 @@ public sealed partial class MainWindow
     private void OnPlayPauseClick(object sender, RoutedEventArgs e) => SetReplayPlaying(!_clock.IsPlaying);
 
     private void OnRestartReplayClick(object sender, RoutedEventArgs e) => RestartReplay();
+
+    private ReplayFollowMode FollowMode =>
+        FollowBox.SelectedIndex == 1 ? ReplayFollowMode.EdgeNudge : ReplayFollowMode.Centered;
+
+    /// <summary>Can be chosen before pressing Play and changed while playing; remembered for next time.</summary>
+    private void OnFollowModeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (FollowBox.SelectedIndex < 0)
+        {
+            return;
+        }
+
+        _camera = new CameraFollower(FollowMode);
+        if (_notebook.ReplayFollow != FollowMode && !string.IsNullOrEmpty(_notebookFolder) && _notebookReady.Task.IsCompleted)
+        {
+            _notebook.ReplayFollow = FollowMode;
+            SaveNotebookIndex();
+        }
+    }
 
     private void OnSpeedChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -412,7 +431,7 @@ public sealed partial class MainWindow
     /// <summary>Where the next event will happen, if it is about to: lets the view get there first.</summary>
     private Point? UpcomingTarget()
     {
-        const double LeadMs = 900;   // real time
+        const double LeadMs = 1300;   // real time
         if (_drawing.Count > 0 || _nextItem >= _timeline.Items.Count)
         {
             return null;

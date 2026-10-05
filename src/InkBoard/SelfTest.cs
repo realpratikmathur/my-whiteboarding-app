@@ -99,6 +99,9 @@ public static class SelfTest
                     case "replay":
                         await window.RunReplayTestAsync(log);
                         break;
+                    case "replay-nudge":
+                        await window.RunReplayNudgeTestAsync(log);
+                        break;
                     case "replay-read":
                         await window.RunReplayReadTestAsync(log);
                         break;

@@ -38,6 +38,9 @@ public sealed class Notebook
     public List<NotebookPage> Pages { get; set; } = [];
     public Guid? LastOpenPageId { get; set; }
 
+    /// <summary>The replay follow mode chosen last, so it is the default next time.</summary>
+    public ReplayFollowMode ReplayFollow { get; set; }
+
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
 
     public static Notebook FromJson(string json) =>
