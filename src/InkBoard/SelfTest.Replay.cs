@@ -140,6 +140,80 @@ public sealed partial class MainWindow
         await Task.Delay(500);
     }
 
+    /// <summary>
+    /// Scenario "replay-nudge": a line that runs off the right of the screen, then lines down past the
+    /// bottom; replayed in both follow modes while measuring where the pen is on screen and how the view moves.
+    /// </summary>
+    internal async Task RunReplayNudgeTestAsync(StringBuilder log)
+    {
+        InkDrawingAttributes pen = Presenter.CopyDefaultDrawingAttributes();
+        pen.Size = new Size(4, 4);
+        double viewWidth = CanvasScroller.ViewportWidth, viewHeight = CanvasScroller.ViewportHeight;
+        log.AppendLine($"viewport {viewWidth:0}x{viewHeight:0}");
+
+        StartRecording();
+        await DrawAsync(pen, new Point(150, 200), new Point(viewWidth + 900, 230), 11000);   // off the right edge, at handwriting pace
+        for (int line = 0; line < 7; line++)
+        {
+            await DrawAsync(pen, new Point(150, 330 + line * 130), new Point(650, 340 + line * 130), 1500);   // down the page
+        }
+
+        StopRecording();
+        await SaveCurrentPageAsync();
+        log.AppendLine($"selector default: \"{(FollowBox.SelectedItem as Microsoft.UI.Xaml.Controls.ComboBoxItem)?.Content}\"");
+
+        foreach (int mode in new[] { 0, 1 })
+        {
+            await EnterReplayAsync();
+            FollowBox.SelectedIndex = mode;       // chosen on the replay bar before pressing Play
+            SpeedBox.SelectedIndex = 1;
+            RestartReplay();
+            SetReplayPlaying(true);
+
+            double maxRight = 0, maxDown = 0, largestStep = 0, firstScrollPenX = -1, firstScrollPenY = -1;
+            double lastX = 0, lastY = 0;
+            int samples = 0, stillSamples = 0;
+            while (!_clock.AtEnd)
+            {
+                await Task.Delay(16);
+                double x = CanvasScroller.HorizontalOffset, y = CanvasScroller.VerticalOffset;
+                largestStep = Math.Max(largestStep, Math.Max(Math.Abs(x - lastX), Math.Abs(y - lastY)));
+                if (x == lastX && y == lastY)
+                {
+                    stillSamples++;
+                }
+
+                if (_cameraTarget is Point pen2 && _drawing.Count > 0)
+                {
+                    double relX = (pen2.X - x) / viewWidth, relY = (pen2.Y - y) / viewHeight;
+                    maxRight = Math.Max(maxRight, relX);
+                    maxDown = Math.Max(maxDown, relY);
+                    if (firstScrollPenX < 0 && x > 0.5)
+                    {
+                        firstScrollPenX = relX;
+                    }
+
+                    if (firstScrollPenY < 0 && y > 0.5)
+                    {
+                        firstScrollPenY = relY;
+                    }
+                }
+
+                (lastX, lastY) = (x, y);
+                samples++;
+            }
+
+            log.AppendLine($"{(mode == 1 ? "NUDGE" : "CENTRED")}: view first moved right when the pen was at {firstScrollPenX:P0} of the width, " +
+                $"down at {firstScrollPenY:P0} of the height");
+            log.AppendLine($"    pen never further than {maxRight:P0} across / {maxDown:P0} down the screen; " +
+                $"largest view movement between two samples {largestStep:0.0} px; view still in {100.0 * stillSamples / samples:0}% of samples; " +
+                $"final offset {CanvasScroller.HorizontalOffset:0},{CanvasScroller.VerticalOffset:0}");
+            await ExitReplayAsync();
+        }
+
+        log.AppendLine($"remembered in the notebook: {_notebook.ReplayFollow}");
+    }
+
     internal async Task RunReplayReadTestAsync(StringBuilder log)
     {
         log.AppendLine($"loaded recording: {_recording.Events.Count} events, {_recordedStrokeCount} strokes, length {_recording.Length:0} ms, " +

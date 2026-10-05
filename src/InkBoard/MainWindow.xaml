@@ -207,7 +207,7 @@
             Grid.ColumnSpan="3"
             Padding="8,4"
             Background="{ThemeResource LayerFillColorDefaultBrush}"
-            ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto"
+            ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto"
             ColumnSpacing="8"
             Visibility="Collapsed">
             <Button x:Name="PlayPauseButton" AutomationProperties.Name="Play or pause" Click="OnPlayPauseClick">
@@ -227,17 +227,27 @@
                 AutomationProperties.Name="Playback speed"
                 SelectionChanged="OnSpeedChanged"
                 ToolTipService.ToolTip="Playback speed" />
+            <ComboBox
+                x:Name="FollowBox"
+                Grid.Column="3"
+                MinWidth="190"
+                AutomationProperties.Name="How the view follows the writing"
+                SelectionChanged="OnFollowModeChanged"
+                ToolTipService.ToolTip="How the view follows the writing: keep it in the middle of the screen, or leave the view still and ease over only when the writing reaches the bottom or right edge">
+                <ComboBoxItem Content="Follow: centred" />
+                <ComboBoxItem Content="Follow: nudge at edges" />
+            </ComboBox>
             <ProgressBar
                 x:Name="ReplayProgress"
-                Grid.Column="3"
+                Grid.Column="4"
                 VerticalAlignment="Center" />
             <TextBlock
                 x:Name="ReplayTime"
-                Grid.Column="4"
+                Grid.Column="5"
                 MinWidth="90"
                 VerticalAlignment="Center"
                 TextAlignment="Right" />
-            <Button Grid.Column="5" Click="OnExitReplayClick" Content="Exit replay" />
+            <Button Grid.Column="6" Click="OnExitReplayClick" Content="Exit replay" />
         </Grid>
 
         <!-- Pages and subpages. -->

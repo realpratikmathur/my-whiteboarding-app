@@ -461,6 +461,34 @@ Pen-only (I cannot test these; please check and tell me exactly what happens)
 - [ ] With "Draw with touch" on: a finger inks. Lasso / point eraser / text tool with a FINGER are not
       expected to work (the cursor does not follow touch); use pen or mouse for those.
 
+## Phase 16 — Replay follow mode: centred or nudge at edges
+
+Press Replay: the bar now has a "Follow" box next to the speed. Choose before pressing Play (it can also be
+changed while playing). The choice is remembered for next time.
+
+Follow: nudge at edges
+- [ ] Replay a lesson written across and down a screenful. The view stays completely still while the
+      writing is inside the screen.
+- [ ] When the writing reaches the last line at the bottom (about the bottom seventh of the screen), the
+      view eases down by roughly a tenth of the screen so that line and the next ones are visible, then is
+      still again.
+- [ ] When a line runs toward the right edge, the view eases right the same way; when the next line starts
+      back at the left, it eases back.
+- [ ] Every movement starts and stops gently - no jumps. A return from the far right to the start of the next
+      line is the largest movement; say if it should be slower.
+- [ ] The ink being written is always on screen, also at 0.5x and 2.5x speed and when zoomed in.
+- [ ] A lesson that jumps to a far part of the page: the view travels there shortly before the writing starts.
+- [ ] Private notes behave as before (always on the page, never replayed).
+
+Follow: centred
+- [ ] Same lesson: the writing is kept around the middle of the screen, as before.
+
+Both
+- [ ] Switch between the two while a replay is running: it takes effect at once.
+- [ ] Close and restart the app: the Follow box shows your last choice.
+- [ ] For recording with OBS, compare both and tell me which you prefer as the default and whether the
+      trigger zones (bottom ~14%, right ~10%) or the nudge distance should change.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
