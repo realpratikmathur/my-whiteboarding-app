@@ -353,6 +353,11 @@ public sealed partial class MainWindow
     {
         dialog.XamlRoot = Root.XamlRoot;
         Presenter.IsInputEnabled = false;
+        if (_middleButton is not null)
+        {
+            _middleButton.Enabled = false;
+        }
+
         Presenter.InputDeviceTypes = Windows.UI.Core.CoreInputDeviceTypes.None;
         try
         {
@@ -362,6 +367,10 @@ public sealed partial class MainWindow
         {
             ApplyInputDevices();
             Presenter.IsInputEnabled = !_replaying;   // replay keeps input off until it is left
+            if (_middleButton is not null)
+            {
+                _middleButton.Enabled = true;
+            }
         }
     }
 

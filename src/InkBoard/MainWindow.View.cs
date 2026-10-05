@@ -1,3 +1,5 @@
+using System;
+using System.Threading;
 using InkBoard.Core;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
@@ -10,25 +12,64 @@ namespace InkBoard;
 // Mouse navigation: the wheel zooms (up = in, down = out) around the pointer; holding the middle button
 // drags the page.
 //
-// The InkCanvas owns pen and mouse input on the ink thread, and which route an input it does not turn into
-// ink takes is not documented. So both routes are wired to the same view code:
-//   - XAML pointer events on the page surface (input the presenter passes through), and
-//   - InkUnprocessedInput (input the presenter receives but does not process).
-// Both compute an absolute scroll target from the same anchor, so it does not matter if both fire.
+// Wheel: arrives as an ordinary XAML PointerWheelChanged even over the InkCanvas (verified with real wheel
+// messages). Middle button: the InkCanvas would ink or erase with it, so MiddleButtonHook intercepts the
+// press before the ink layer sees it and reports the drag here (verified with real mouse input in the
+// "realmouse" self-test).
 public sealed partial class MainWindow
 {
+    private MiddleButtonHook? _middleButton;
     private bool _panning;
-    private Point _panAnchor;          // page point grabbed when the middle button went down
-    private uint _panPointerId;
+    private double _panStartX, _panStartY;      // scroll offsets when the drag began
+    private int _panStartScreenX, _panStartScreenY;
+    private int _panLatestX, _panLatestY, _panMovePending;
 
     private void ConfigureViewInput()
     {
         // Handled on the page surface, i.e. before the event bubbles to the ScrollViewer, which would scroll.
         PageSurface.PointerWheelChanged += OnPageWheel;
-        PageSurface.PointerPressed += OnPagePointerPressed;
-        PageSurface.PointerMoved += OnPagePointerMoved;
-        PageSurface.PointerReleased += OnPagePointerReleased;
-        PageSurface.PointerCaptureLost += (_, _) => _panning = false;
+
+        _middleButton = new MiddleButtonHook(WinRT.Interop.WindowNative.GetWindowHandle(this));
+        _middleButton.DragStarted += (x, y) => DispatcherQueue.TryEnqueue(() => BeginDragPan(x, y));
+        _middleButton.DragMoved += (x, y) =>
+        {
+            // Mouse moves can arrive faster than the UI draws: keep only the newest.
+            (_panLatestX, _panLatestY) = (x, y);
+            if (Interlocked.Exchange(ref _panMovePending, 1) == 0)
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    Interlocked.Exchange(ref _panMovePending, 0);
+                    DragPanTo(_panLatestX, _panLatestY);
+                });
+            }
+        };
+        _middleButton.DragEnded += () => DispatcherQueue.TryEnqueue(EndDragPan);
+
+        CanvasScroller.SizeChanged += (_, _) => UpdateHookPageArea();
+        CanvasScroller.LayoutUpdated += (_, _) => UpdateHookPageArea();
+        Closed += (_, _) => _middleButton?.Dispose();
+    }
+
+    private (int Left, int Top, int Right, int Bottom) _hookArea;
+
+    private void UpdateHookPageArea()
+    {
+        if (_middleButton is null || Root.XamlRoot is null || CanvasScroller.ActualWidth == 0)
+        {
+            return;
+        }
+
+        double scale = Root.XamlRoot.RasterizationScale;
+        Point origin = CanvasScroller.TransformToVisual(Root).TransformPoint(new Point(0, 0));
+        var area = (
+            (int)(origin.X * scale), (int)(origin.Y * scale),
+            (int)((origin.X + CanvasScroller.ViewportWidth) * scale), (int)((origin.Y + CanvasScroller.ViewportHeight) * scale));
+        if (area != _hookArea)
+        {
+            _hookArea = area;
+            _middleButton.SetPageArea(area.Item1, area.Item2, area.Item3, area.Item4);
+        }
     }
 
     // ---- Zoom -----------------------------------------------------------------------------------
@@ -66,65 +107,27 @@ public sealed partial class MainWindow
         CanvasScroller.ChangeView(x, y, (float)zoom, disableAnimation: true);
     }
 
-    // ---- Middle-button pan ----------------------------------------------------------------------
+    // ---- Middle-button pan (screen pixels from the hook) -----------------------------------------
 
-    /// <summary>Starts a pan with the page point that is under the pointer.</summary>
-    internal void BeginPan(Point pagePoint)
+    internal void BeginDragPan(int screenX, int screenY)
     {
         _panning = true;
-        _panAnchor = pagePoint;
+        (_panStartScreenX, _panStartScreenY) = (screenX, screenY);
+        (_panStartX, _panStartY) = (CanvasScroller.HorizontalOffset, CanvasScroller.VerticalOffset);
     }
 
-    /// <summary>Scrolls so that the grabbed page point is under the pointer again.</summary>
-    internal void PanTo(Point pointerPagePoint)
+    internal void DragPanTo(int screenX, int screenY)
     {
         if (!_panning)
         {
             return;
         }
 
-        (double x, double y) = ViewMath.PanToAnchor(
-            CanvasScroller.HorizontalOffset, CanvasScroller.VerticalOffset, CanvasScroller.ZoomFactor,
-            _panAnchor.X, _panAnchor.Y, pointerPagePoint.X, pointerPagePoint.Y);
+        double scale = Root.XamlRoot.RasterizationScale;
+        (double x, double y) = ViewMath.PanByDrag(
+            _panStartX, _panStartY, (screenX - _panStartScreenX) / scale, (screenY - _panStartScreenY) / scale);
         CanvasScroller.ChangeView(x, y, null, disableAnimation: true);
     }
 
-    internal void EndPan() => _panning = false;
-
-    // Route 1: XAML pointer events.
-    private void OnPagePointerPressed(object sender, PointerRoutedEventArgs e)
-    {
-        PointerPoint point = e.GetCurrentPoint(PageSurface);
-        if (point.PointerDeviceType == PointerDeviceType.Mouse && point.Properties.IsMiddleButtonPressed)
-        {
-            BeginPan(point.Position);
-            _panPointerId = point.PointerId;
-            PageSurface.CapturePointer(e.Pointer);
-            e.Handled = true;
-        }
-    }
-
-    private void OnPagePointerMoved(object sender, PointerRoutedEventArgs e)
-    {
-        if (_panning && e.Pointer.PointerId == _panPointerId)
-        {
-            PanTo(e.GetCurrentPoint(PageSurface).Position);
-            e.Handled = true;
-        }
-    }
-
-    private void OnPagePointerReleased(object sender, PointerRoutedEventArgs e)
-    {
-        if (_panning && e.Pointer.PointerId == _panPointerId)
-        {
-            EndPan();
-            PageSurface.ReleasePointerCapture(e.Pointer);
-            e.Handled = true;
-        }
-    }
-
-    // Route 2: input the presenter received but did not process (see ConfigureCanvasBehaviours).
-    private static bool IsMiddleButton(Windows.UI.Core.PointerEventArgs args) =>
-        args.CurrentPoint.PointerDevice.PointerDeviceType == Windows.Devices.Input.PointerDeviceType.Mouse
-        && args.CurrentPoint.Properties.IsMiddleButtonPressed;
+    internal void EndDragPan() => _panning = false;
 }

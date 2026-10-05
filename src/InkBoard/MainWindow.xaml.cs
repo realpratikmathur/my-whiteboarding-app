@@ -23,7 +23,6 @@ public sealed partial class MainWindow : Window
 
     private bool _modelerOverridden;
     private bool _updatingModelerUi;
-    private bool _barrelErasing;
 
     public MainWindow()
     {
@@ -86,38 +85,26 @@ public sealed partial class MainWindow : Window
         Presenter.InputConfiguration.IsPrimaryBarrelButtonInputEnabled = true;
         Presenter.InputConfiguration.IsEraserInputEnabled = true;
 
-        // Barrel-button drags are processed by the presenter (in whatever Mode is current) instead of
-        // being handed to UnprocessedInput. The mode is flipped to Erasing while the button is held.
-        Presenter.InputProcessingConfiguration.RightDragAction = InkInputRightDragAction.AllowProcessing;
+        // A barrel-button drag (and a right mouse button drag) is left unprocessed by the presenter. It
+        // arrives through InkUnprocessedInput, where it erases whole strokes (MainWindow.Tools.cs).
+        //
+        // The earlier design flipped the presenter to Erasing while the barrel button was seen during hover.
+        // That cannot work on 2.5.4-experimental: the pointer data of ink events is unreadable (see
+        // PointerOnPage), so the button state during hover is unknown.
+        Presenter.InputProcessingConfiguration.RightDragAction = InkInputRightDragAction.LeaveUnprocessed;
 
-        Presenter.UnprocessedInput.PointerHovered += (_, args) => OnPenHover(IsBarrelPressed(args));
-        Presenter.UnprocessedInput.PointerExited += (_, _) => OnPenHover(barrelPressed: false);
-    }
-
-    private static bool IsBarrelPressed(PointerEventArgs args)
-    {
-        var point = args.CurrentPoint;
-        return point.PointerDevice.PointerDeviceType == Windows.Devices.Input.PointerDeviceType.Pen
-            && point.Properties.IsBarrelButtonPressed;
-    }
-
-    private void OnPenHover(bool barrelPressed)
-    {
-        // Ink events are not documented to arrive on the UI thread; always hop.
-        DispatcherQueue.TryEnqueue(() =>
+        // XAML still sees the pen hovering over the page before it touches down. That is the only place the
+        // pen's pointer id can be learned, which haptics need.
+        PageSurface.AddHandler(UIElement.PointerMovedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, e) =>
         {
-            if (barrelPressed == _barrelErasing)
+            if (e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Pen)
             {
-                return;
+                _penPointerId = e.Pointer.PointerId;
             }
-
-            _barrelErasing = barrelPressed;
-            Presenter.InputProcessingConfiguration.Mode = barrelPressed
-                ? InkInputProcessingMode.Erasing
-                : ModeForActiveTool();
-            BarrelStatus.Text = barrelPressed ? "Barrel button: erasing" : "Barrel button: released";
-        });
+        }), handledEventsToo: true);
     }
+
+    private uint? _penPointerId;
 
     // ---- Haptics --------------------------------------------------------------------------------
 
@@ -125,7 +112,11 @@ public sealed partial class MainWindow : Window
     {
         Presenter.StrokeInput.StrokeStarted += (_, args) =>
         {
-            uint pointerId = args.CurrentPoint.PointerId;
+            if (_penPointerId is not uint pointerId)
+            {
+                return;   // not a pen, or the pen was never seen hovering
+            }
+
             DispatcherQueue.TryEnqueue(() =>
             {
                 _haptics.Start(pointerId, Toolbar.ActiveTool?.ToolKind);

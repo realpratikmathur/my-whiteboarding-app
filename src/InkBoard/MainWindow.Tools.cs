@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using InkBoard.Core;
@@ -56,35 +57,11 @@ public sealed partial class MainWindow
         Toolbar.EraseAllClicked += (_, _) => EraseAll();
 
         // Lasso and point eraser work on input the presenter leaves unprocessed (Mode = None).
-        // A middle-button drag is never a tool gesture: it pans the page (MainWindow.View.cs).
-        Presenter.UnprocessedInput.PointerPressed += (_, args) =>
-            RouteToolInput(args, IsMiddleButton(args) ? BeginPan : OnToolPressed);
-        Presenter.UnprocessedInput.PointerMoved += (_, args) =>
-            RouteToolInput(args, p =>
-            {
-                if (_panning)
-                {
-                    PanTo(p);
-                }
-                else
-                {
-                    OnToolMoved(p);
-                }
-            });
-        Presenter.UnprocessedInput.PointerReleased += (_, args) => RouteToolInput(args, EndPanOrTool);
-        Presenter.UnprocessedInput.PointerLost += (_, args) => RouteToolInput(args, EndPanOrTool);
-
-        void EndPanOrTool(Point p)
-        {
-            if (_panning)
-            {
-                EndPan();
-            }
-            else
-            {
-                OnToolReleased(p);
-            }
-        }
+        // (Middle-button drags never get here: MiddleButtonHook takes them for panning.)
+        Presenter.UnprocessedInput.PointerPressed += (_, args) => RouteToolInput(args, OnToolPressed);
+        Presenter.UnprocessedInput.PointerMoved += (_, args) => RouteToolInput(args, OnToolMoved);
+        Presenter.UnprocessedInput.PointerReleased += (_, args) => RouteToolInput(args, OnToolReleased, evenWithoutPosition: true);
+        Presenter.UnprocessedInput.PointerLost += (_, args) => RouteToolInput(args, OnToolReleased, evenWithoutPosition: true);
 
         CanvasScroller.ViewChanged += (_, _) =>
         {
@@ -125,10 +102,86 @@ public sealed partial class MainWindow
         }
     }
 
-    private void RouteToolInput(PointerEventArgs args, System.Action<Point> handler)
+    [System.Runtime.InteropServices.DllImport("user32")]
+    private static extern bool GetCursorPos(out POINT point);
+
+    [System.Runtime.InteropServices.DllImport("user32")]
+    private static extern bool ScreenToClient(IntPtr hwnd, ref POINT point);
+
+    [System.Runtime.InteropServices.DllImport("user32")]
+    private static extern short GetAsyncKeyState(int virtualKey);
+
+    private static bool IsRightButtonDown => (GetAsyncKeyState(0x02) & 0x8000) != 0;
+
+    /// <summary>
+    /// Where the pointer is on the page right now, from the system cursor (which follows mouse and pen).
+    ///
+    /// This replaces the pointer data of ink events. On WindowsAppSDK 2.5.4-experimental the
+    /// InkStrokeInput / InkUnprocessedInput events are raised (on the UI thread) but their
+    /// Windows.UI.Core.PointerEventArgs carry no readable point: CurrentPoint and every item of
+    /// GetIntermediatePoints() fail with 0x80004021 (found by driving the app with real mouse input). The
+    /// events therefore only say WHEN something happened; this says where.
+    /// </summary>
+    private Point? PointerOnPage()
     {
-        Point position = args.CurrentPoint.Position;
-        DispatcherQueue.TryEnqueue(() => handler(position));
+        if (Root.XamlRoot is null || !GetCursorPos(out POINT cursor))
+        {
+            return null;
+        }
+
+        ScreenToClient(WinRT.Interop.WindowNative.GetWindowHandle(this), ref cursor);
+        double scale = Root.XamlRoot.RasterizationScale;
+        return Root.TransformToVisual(PageSurface).TransformPoint(new Point(cursor.X / scale, cursor.Y / scale));
+    }
+
+    private void RouteToolInput(PointerEventArgs args, System.Action<Point> handler, bool evenWithoutPosition = false)
+    {
+        // Nothing here may throw: an exception escaping one handler of an ink event also stops the handlers
+        // registered after it from being called.
+        Point? position = PointerOnPage();
+        if (position is null && !evenWithoutPosition)
+        {
+            return;
+        }
+
+        // A release must always be delivered, if need be at the last known position.
+        handler(position ?? _lastToolPoint);
+    }
+
+    // ---- Barrel-button / right-button drag: erase whole strokes ---------------------------------
+
+    private const double StrokeEraserRadius = 6;
+
+    private List<int>? _erasedByDrag;
+
+    /// <summary>Removes every stroke the pointer passed over between two positions.</summary>
+    private void EraseStrokesAlong(Point from, Point to)
+    {
+        var hit = new List<int>();
+        foreach (InkStroke stroke in _document.Container.GetStrokes())
+        {
+            Size tip = stroke.DrawingAttributes.Size;
+            double radius = StrokeEraserRadius + System.Math.Max(tip.Width, tip.Height) / 2;
+            Rect bounds = stroke.BoundingRect;
+            if (bounds.Right < System.Math.Min(from.X, to.X) - radius || bounds.Left > System.Math.Max(from.X, to.X) + radius
+                || bounds.Bottom < System.Math.Min(from.Y, to.Y) - radius || bounds.Top > System.Math.Max(from.Y, to.Y) + radius)
+            {
+                continue;
+            }
+
+            List<Point2> positions = InkDocument.CanvasPositions(stroke);
+            var runs = StrokeSplitter.Split(positions, new Point2(from.X, from.Y), new Point2(to.X, to.Y), radius);
+            if (!StrokeSplitter.IsUntouched(runs, positions.Count))
+            {
+                hit.Add(_document.Track(stroke));
+            }
+        }
+
+        if (hit.Count > 0)
+        {
+            _document.Remove(hit);
+            _erasedByDrag!.AddRange(hit);
+        }
     }
 
     private bool LassoActive => ReferenceEquals(Toolbar.ActiveTool, LassoButton);
@@ -164,7 +217,15 @@ public sealed partial class MainWindow
         _toolPointerDown = true;
         _lastToolPoint = position;
 
-        if (ObjectToolActive)
+        // With a pen or eraser tool selected, the only presses the presenter leaves unprocessed are
+        // barrel-button / right-button drags. With the other tools the button has to be checked.
+        if (ModeForActiveTool() != InkInputProcessingMode.None || IsRightButtonDown)
+        {
+            ClearSelection();
+            _erasedByDrag = [];
+            EraseStrokesAlong(position, position);
+        }
+        else if (ObjectToolActive)
         {
             OnObjectToolPressed(position);
         }
@@ -198,7 +259,11 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (ObjectToolActive)
+        if (_erasedByDrag is not null)
+        {
+            EraseStrokesAlong(_lastToolPoint, position);
+        }
+        else if (ObjectToolActive)
         {
             OnObjectToolMoved(position);
         }
@@ -230,7 +295,15 @@ public sealed partial class MainWindow
 
         _toolPointerDown = false;
 
-        if (ObjectToolActive)
+        if (_erasedByDrag is List<int> erased)
+        {
+            _erasedByDrag = null;
+            if (erased.Count > 0)
+            {
+                _undo.Push(new RemoveStrokesStep(erased));
+            }
+        }
+        else if (ObjectToolActive)
         {
             OnObjectToolReleased();
         }

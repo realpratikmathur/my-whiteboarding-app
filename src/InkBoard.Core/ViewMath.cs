@@ -25,10 +25,11 @@ public static class ViewMath
     }
 
     /// <summary>
-    /// Offset that puts the page point grabbed at the start of a drag back under the pointer, given where
-    /// the pointer is now in page coordinates. Applying it repeatedly with the same input changes nothing.
+    /// Scroll offset for a drag-pan: the page follows the mouse, so the view moves the opposite way by the
+    /// distance dragged since the button went down. Computed from the starting offset each time, so it
+    /// cannot drift however many moves are skipped.
     /// </summary>
-    public static (double OffsetX, double OffsetY) PanToAnchor(
-        double offsetX, double offsetY, double zoom, double anchorPageX, double anchorPageY, double pointerPageX, double pointerPageY) =>
-        (Math.Max(0, offsetX + (anchorPageX - pointerPageX) * zoom), Math.Max(0, offsetY + (anchorPageY - pointerPageY) * zoom));
+    /// <param name="dragX">How far the pointer has moved since the drag began, in screen (DIP) units.</param>
+    public static (double OffsetX, double OffsetY) PanByDrag(double startOffsetX, double startOffsetY, double dragX, double dragY) =>
+        (Math.Max(0, startOffsetX - dragX), Math.Max(0, startOffsetY - dragY));
 }
