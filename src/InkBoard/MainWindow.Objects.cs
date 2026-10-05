@@ -98,6 +98,7 @@ public sealed partial class MainWindow
             box.Resources["TextControlForeground" + state] = brush;
         }
 
+        ApplyStyleToView(obj, box);
         box.TextChanged += (_, _) => OnTextBoxEdited(obj, box);
         box.GotFocus += (_, _) => _textAtFocus = obj.Text;
         box.LostFocus += (_, _) => CommitText(obj);
@@ -238,30 +239,16 @@ public sealed partial class MainWindow
             return;
         }
 
-        bool isNew = ReferenceEquals(_newTextObject, obj);
-        if (isNew)
-        {
-            _newTextObject = null;
-        }
-
         if (string.IsNullOrWhiteSpace(obj.Text))
         {
-            // An empty box left behind by a stray tap, or a box whose text was deleted.
-            if (isNew)
-            {
-                HideObject(obj);
-            }
-            else
-            {
-                SetText(obj, _textAtFocus);
-                RemoveObjectWithUndo(obj);
-            }
-
+            // Still empty: it may only have lost focus to the font controls. It is tidied away when the
+            // selection moves on (DiscardIfEmpty).
             return;
         }
 
-        if (isNew)
+        if (ReferenceEquals(_newTextObject, obj))
         {
+            _newTextObject = null;
             _undo.Push(new ActionStep(() => HideObject(obj), () => ShowObject(obj)));
             _textAtFocus = obj.Text;
             return;
@@ -291,8 +278,38 @@ public sealed partial class MainWindow
 
     private void SelectObject(PageObject? obj)
     {
+        PageObject? previous = _selectedObject;
         _selectedObject = obj;
+        if (previous is not null && !ReferenceEquals(previous, obj))
+        {
+            DiscardIfEmpty(previous);
+        }
+
         UpdateObjectChrome();
+        if (obj is { Kind: PageObjectKind.Text })
+        {
+            ShowStyleInFormatBar(obj);
+        }
+    }
+
+    /// <summary>Removes a text box that was left without text: a stray tap, or a box whose text was deleted.</summary>
+    private void DiscardIfEmpty(PageObject obj)
+    {
+        if (obj.Kind != PageObjectKind.Text || !string.IsNullOrWhiteSpace(obj.Text) || !_objectViews.ContainsKey(obj))
+        {
+            return;
+        }
+
+        if (ReferenceEquals(_newTextObject, obj))
+        {
+            _newTextObject = null;
+            HideObject(obj);   // never had text: nothing to undo
+        }
+        else
+        {
+            SetText(obj, _textAtFocus);
+            RemoveObjectWithUndo(obj);
+        }
     }
 
     private void UpdateObjectChrome()
@@ -344,8 +361,9 @@ public sealed partial class MainWindow
             Root.Focus(FocusState.Programmatic);
             var text = new PageObject
             {
-                Kind = PageObjectKind.Text, X = p.X, Y = p.Y - 16, FontSize = 20, Color = _textColor,
+                Kind = PageObjectKind.Text, X = p.X, Y = p.Y - 16, Color = _textColor,
             };
+            text.CopyStyleFrom(_textStyle);   // font, size, bold, italic chosen on the format bar
             // Not on the undo stack until something has been typed (see CommitText).
             ShowObject(text);
             _newTextObject = text;

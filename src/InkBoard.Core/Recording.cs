@@ -11,6 +11,9 @@ public enum RecordedEventKind
     ObjectRemove,
     ObjectRect,
     ObjectText,
+
+    /// <summary>Font, size, bold or italic of a text box changed (the event carries a full copy).</summary>
+    ObjectStyle,
 }
 
 /// <summary>
@@ -37,7 +40,7 @@ public sealed class RecordedEvent
 
     public Guid ObjectId { get; set; }
 
-    /// <summary>Full copy of the object for <see cref="RecordedEventKind.ObjectAdd"/>.</summary>
+    /// <summary>Full copy of the object for <see cref="RecordedEventKind.ObjectAdd"/> and ObjectStyle.</summary>
     public PageObject? Object { get; set; }
 
     public double X { get; set; }
@@ -97,6 +100,9 @@ public sealed class RecordingState
                 break;
             case RecordedEventKind.ObjectRect when Objects.TryGetValue(e.ObjectId, out PageObject? moved):
                 (moved.X, moved.Y, moved.Width, moved.Height) = (e.X, e.Y, e.Width, e.Height);
+                break;
+            case RecordedEventKind.ObjectStyle when e.Object is not null && Objects.TryGetValue(e.ObjectId, out PageObject? styled):
+                styled.CopyStyleFrom(e.Object);
                 break;
             case RecordedEventKind.ObjectText when Objects.TryGetValue(e.ObjectId, out PageObject? typed):
                 typed.Text = e.Text ?? "";

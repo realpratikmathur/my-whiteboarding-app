@@ -197,6 +197,7 @@ public sealed partial class MainWindow
     private void OnActiveToolChangedForCanvas()
     {
         Presenter.InputProcessingConfiguration.Mode = ModeForActiveTool();
+        TextFormatBar.Visibility = ObjectToolActive ? Visibility.Visible : Visibility.Collapsed;
         if (!LassoActive)
         {
             ClearSelection();

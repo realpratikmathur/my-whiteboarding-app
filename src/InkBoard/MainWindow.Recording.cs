@@ -277,7 +277,7 @@ public sealed partial class MainWindow
         {
             Kind = kind,
             ObjectId = obj.Id,
-            Object = kind == RecordedEventKind.ObjectAdd ? obj.Clone() : null,
+            Object = kind is RecordedEventKind.ObjectAdd or RecordedEventKind.ObjectStyle ? obj.Clone() : null,
             X = obj.X, Y = obj.Y, Width = obj.Width, Height = obj.Height,
             Text = kind == RecordedEventKind.ObjectText ? obj.Text : null,
         });
@@ -316,6 +316,11 @@ public sealed partial class MainWindow
             {
                 LogObject(RecordedEventKind.ObjectAdd, obj);
                 continue;
+            }
+
+            if (!known.HasSameStyleAs(obj))
+            {
+                LogObject(RecordedEventKind.ObjectStyle, obj);
             }
 
             if (known.Text != obj.Text)

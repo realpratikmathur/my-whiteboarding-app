@@ -489,6 +489,34 @@ Both
 - [ ] For recording with OBS, compare both and tell me which you prefer as the default and whether the
       trigger zones (bottom ~14%, right ~10%) or the nudge distance should change.
 
+## Phase 17 — Fonts, sizes, bold and italic for typed text
+
+Select the Text tool ("A"): a format bar appears under the toolbar with Font, Size, B and I.
+Verified with real mouse clicks and real typing; pen taps on the bar and on the page are for you to check.
+
+- [ ] Font box lists the fonts installed on this PC; Size box lists 8 to 72 (the sizes OneNote offers) and
+      also accepts a typed number such as 30.5 followed by Enter.
+- [ ] Tap the page, choose a font / size / B / I BEFORE typing, then type: the caret is still there and the
+      text comes out in that style.
+- [ ] Type first, then change font, size, B or I: the whole text box changes, and you can keep typing without
+      tapping the box again.
+- [ ] Tap another spot: the new text box starts with the style last chosen.
+- [ ] Tap an existing text box: the bar shows that box's font, size, B and I.
+- [ ] Ctrl+Z / Ctrl+Y (with the caret out of the text box, e.g. after choosing a pen) step through style
+      changes of an existing box.
+- [ ] Record a lesson in which you type a heading and then enlarge or bold it: the replay shows the change at
+      the right moment.
+- [ ] Restart the app: every text box keeps its font, size and style. Text typed before this update is
+      Segoe UI at its old size.
+- [ ] "Private text" still works together with any font and size, and is still hidden by the OBS filter.
+- [ ] Tapping the page without typing still leaves nothing behind.
+
+Differences from OneNote, by design of this version
+- The style applies to a whole text box, not to selected words inside it. For mixed styles use separate
+  text boxes.
+- No underline, strikethrough, highlight or text colours other than black and the private colour. Tell me
+  if you want any of these and I will look at switching text boxes to a rich-text control.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

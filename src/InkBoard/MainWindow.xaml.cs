@@ -33,6 +33,7 @@ public sealed partial class MainWindow : Window
         ConfigureModelerPanel();
         ConfigureCanvasBehaviours();
         ConfigureViewInput();
+        ConfigureTextFormat();
         ConfigureRecording();
         ConfigureReplay();
         ConfigureNotebook();
