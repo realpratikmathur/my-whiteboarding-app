@@ -54,11 +54,11 @@ public sealed partial class MainWindow
         log.AppendLine($"wheel down two notches: {ViewState()} (expect zoom 0.909)");
         CanvasScroller.ChangeView(600, 500, 1f, disableAnimation: true);
         await Task.Delay(200);
-        BeginPan(new Point(1000, 800));
-        PanTo(new Point(900, 750));      // mouse moved 100 left, 50 up on the page
+        BeginDragPan(1000, 800);
+        DragPanTo(1000 - (int)(100 * Root.XamlRoot.RasterizationScale), 800 - (int)(50 * Root.XamlRoot.RasterizationScale));   // mouse moved 100 left, 50 up
         await Task.Delay(200);
         log.AppendLine($"pan, pointer 100 left / 50 up of the grabbed point: {ViewState()} (expect offset 700,550)");
-        EndPan();
+        EndDragPan();
 
         // ---- Part 2: real mouse messages to this window ----
         CanvasScroller.ChangeView(600, 500, 1f, disableAnimation: true);

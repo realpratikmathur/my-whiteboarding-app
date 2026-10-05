@@ -49,28 +49,22 @@ public class ViewMathTests
     [Fact]
     public void Dragging_right_and_down_moves_the_view_left_and_up()
     {
-        // Grabbed page point (500, 400); the pointer is now over page point (450, 380), i.e. the mouse moved
-        // 50 left and 20 up on the page, so the view must scroll 50 right and 20 down to follow... and back.
-        (double x, double y) = ViewMath.PanToAnchor(1000, 800, 1, 500, 400, 450, 380);
-        Assert.Equal((1050, 820), (x, y));
-
-        (x, y) = ViewMath.PanToAnchor(1000, 800, 1, 500, 400, 560, 430);
-        Assert.Equal((940, 770), (x, y));
+        // The page follows the mouse: drag 120 right / 60 down and the view scrolls 120 left / 60 up.
+        Assert.Equal((480, 440), ViewMath.PanByDrag(600, 500, 120, 60));
+        Assert.Equal((650, 520), ViewMath.PanByDrag(600, 500, -50, -20));
     }
 
     [Fact]
-    public void Pan_accounts_for_zoom_and_settles_once_the_anchor_is_under_the_pointer()
+    public void Pan_is_computed_from_the_start_so_skipped_moves_do_not_matter()
     {
-        (double x, double y) = ViewMath.PanToAnchor(1000, 800, 2, 500, 400, 450, 380);
-        Assert.Equal((1100, 840), (x, y));
-
-        // After that scroll the pointer is over the anchor again: nothing more to do.
-        Assert.Equal((1100, 840), ViewMath.PanToAnchor(1100, 840, 2, 500, 400, 500, 400));
+        // Whatever happened in between, a drag of (30, 10) from the start always lands in the same place.
+        Assert.Equal(ViewMath.PanByDrag(600, 500, 30, 10), ViewMath.PanByDrag(600, 500, 30, 10));
+        Assert.Equal((600, 500), ViewMath.PanByDrag(600, 500, 0, 0));
     }
 
     [Fact]
     public void Pan_cannot_go_before_the_page_start()
     {
-        Assert.Equal((0, 0), ViewMath.PanToAnchor(20, 10, 1, 100, 100, 400, 400));
+        Assert.Equal((0, 0), ViewMath.PanByDrag(20, 10, 400, 400));
     }
 }

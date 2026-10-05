@@ -431,6 +431,36 @@ Side-by-side with OneNote
 - [ ] Compare the feel of zooming and of middle-button navigation; say if the zoom step should be finer
       or coarser.
 
+## Phase 15 — Middle-button pan fixed; tools that depend on ink-layer events repaired
+
+Everything in the first two blocks was verified with real mouse input (the `realmouse` self-test drives
+the app with actual mouse events). The pen-only items in the last block could not be.
+
+Middle-button pan (the bug: it drew ink)
+- [ ] Hold the middle mouse button and drag: the page moves with the mouse and nothing is drawn - with the
+      pen tools, the eraser (nothing is erased), the point eraser, the lasso and the text tool.
+- [ ] Works the same when zoomed in or out; the page follows the mouse one to one.
+- [ ] Middle-clicking outside the page (toolbar, page list, another app) behaves as it always did.
+
+Tools that had not been receiving real input (found while fixing the above)
+- [ ] Lasso with the mouse and with the pen: draw a loop around ink, the dashed box appears; drag inside it to
+      move; Delete removes. Also when zoomed in.
+- [ ] Point eraser with mouse and pen: cuts a stroke where you rub.
+- [ ] Text tool: click/tap an empty spot and type; click a text or picture to select, drag to move.
+- [ ] Right mouse button drag over strokes erases whole strokes; Ctrl+Z brings them back.
+
+Pen-only (I cannot test these; please check and tell me exactly what happens)
+- [ ] Pen barrel button held while dragging over strokes: erases whole strokes (same path as the right mouse
+      button). Releasing the button: the pen inks again.
+- [ ] Pen tail eraser: erases strokes.
+- [ ] Lasso / point eraser / text tool with the PEN land exactly under the pen tip (positions now come from
+      the system cursor, which normally follows the pen). If they are offset or do nothing with the pen,
+      tell me.
+- [ ] Haptic pen: vibration while inking (Debug panel shows the haptics status). This depends on the app
+      seeing the pen hover before it touches down; it may not work on this experimental build.
+- [ ] With "Draw with touch" on: a finger inks. Lasso / point eraser / text tool with a FINGER are not
+      expected to work (the cursor does not follow touch); use pen or mouse for those.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
