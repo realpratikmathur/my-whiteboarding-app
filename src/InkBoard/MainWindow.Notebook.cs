@@ -131,7 +131,8 @@ public sealed partial class MainWindow
             {
                 Width = PageSurface.Width,
                 Height = PageSurface.Height,
-                Objects = [.. _objects],
+                // A text box that is still empty (just placed, nothing typed) is not worth keeping.
+                Objects = [.. _objects.Where(o => o.Kind != PageObjectKind.Text || !string.IsNullOrWhiteSpace(o.Text))],
                 // Same order as the strokes in ink.isf.
                 StrokeKeys = _document.Track(_document.Container.GetStrokes())
                     .Select(handle => _strokeKeys.GetValueOrDefault(handle, -1)).ToList(),

@@ -325,6 +325,11 @@ public sealed partial class MainWindow
                 _cameraTarget = new Point(e.X, e.Y);
                 break;
 
+            case RecordedEventKind.ObjectStyle when e.Object is not null && _replayObjects.TryGetValue(e.ObjectId, out PageObject? styled):
+                SetTextStyle(styled, e.Object);
+                _cameraTarget = new Point(styled.X, styled.Y);
+                break;
+
             case RecordedEventKind.ObjectText when _replayObjects.TryGetValue(e.ObjectId, out PageObject? typed):
                 SetText(typed, e.Text ?? "");
                 // Follow the line being typed.
