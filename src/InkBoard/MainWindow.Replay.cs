@@ -165,7 +165,11 @@ public sealed partial class MainWindow
             ShowGhostPage();
         }
 
-        CanvasScroller.ChangeView(0, 0, null, disableAnimation: true);
+        if (FollowMode != ReplayFollowMode.Off)
+        {
+            // With the view under manual control it stays where the presenter put it.
+            CanvasScroller.ChangeView(0, 0, null, disableAnimation: true);
+        }
         UpdateReplayBar();
     }
 
@@ -176,7 +180,12 @@ public sealed partial class MainWindow
     private void OnRestartReplayClick(object sender, RoutedEventArgs e) => RestartReplay();
 
     private ReplayFollowMode FollowMode =>
-        FollowBox.SelectedIndex == 1 ? ReplayFollowMode.EdgeNudge : ReplayFollowMode.Centered;
+        FollowBox.SelectedIndex switch
+        {
+            1 => ReplayFollowMode.EdgeNudge,
+            2 => ReplayFollowMode.Off,
+            _ => ReplayFollowMode.Centered,
+        };
 
     /// <summary>Can be chosen before pressing Play and changed while playing; remembered for next time.</summary>
     private void OnFollowModeChanged(object sender, SelectionChangedEventArgs e)

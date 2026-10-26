@@ -84,7 +84,12 @@ public sealed partial class MainWindow
 
         NotebookPage start = (_notebook.LastOpenPageId is Guid id ? _notebook.Find(id) : null) ?? _notebook.Pages[0];
         RebuildPageTree();
-        FollowBox.SelectedIndex = _notebook.ReplayFollow == ReplayFollowMode.EdgeNudge ? 1 : 0;
+        FollowBox.SelectedIndex = _notebook.ReplayFollow switch
+        {
+            ReplayFollowMode.EdgeNudge => 1,
+            ReplayFollowMode.Off => 2,
+            _ => 0,
+        };
         StartBox.SelectedIndex = _notebook.ReplayStart == ReplayStartMode.Ghost ? 1 : 0;
         await OpenPageAsync(start);
     }

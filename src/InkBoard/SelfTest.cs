@@ -113,6 +113,9 @@ public static class SelfTest
                     case "replay":
                         await window.RunReplayTestAsync(log);
                         break;
+                    case "replay-manual":
+                        await window.RunReplayManualTestAsync(log);
+                        break;
                     case "replay-ghost":
                         await window.RunReplayGhostTestAsync(log);
                         break;
