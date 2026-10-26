@@ -548,6 +548,23 @@ In OBS (what the students see), with the Apply LUT filter set up as in Phase 12
 Side-by-side with OneNote
 - [ ] OneNote has no equivalent; compare the replayed ink itself with OneNote's ink replay as in Phase 11.
 
+## Phase 19 — Replay with "Follow: off" (you move the view yourself)
+
+Press Replay and choose "Follow: off (move the view yourself)" in the Follow box. The choice is remembered.
+Verified with real mouse wheel, middle-button and injected touch input while a replay was playing; the pen
+and your own fingers on the Surface are for you to check.
+
+- [ ] Opening the replay keeps the view where it was (it does not jump to the top of the page). Restart keeps
+      it too.
+- [ ] While the replay plays: wheel up zooms in, wheel down zooms out, around the cursor; the replay never
+      changes the zoom or scroll position back.
+- [ ] While the replay plays: hold the middle mouse button and drag; the page moves with the mouse.
+- [ ] While the replay plays: one finger pans, two fingers pinch-zoom (with "Draw with touch" off).
+- [ ] The replay keeps going when the writing is off screen; scroll there and the ink is there.
+- [ ] Pause, then move around, then Play: it continues from where it was paused.
+- [ ] Works together with "Start: ghost page".
+- [ ] Switching to "Follow: centred" or "nudge at edges" during the replay: the view starts following again.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
