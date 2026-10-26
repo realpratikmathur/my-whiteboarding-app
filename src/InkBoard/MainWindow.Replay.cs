@@ -97,7 +97,9 @@ public sealed partial class MainWindow
         _replayTimer.Stop();
         ReplayBar.Visibility = Visibility.Collapsed;
 
-        // Put the real page back exactly as it was saved.
+        // Put the real page back exactly as it was saved (the reload removes the ghosts from the page).
+        _ghostStrokes.Clear();
+        _ghostTexts.Clear();
         _currentPage = null;
         _pageDirty = false;
         await OpenPageAsync(page);
@@ -250,7 +252,16 @@ public sealed partial class MainWindow
 
         while (_nextItem < _timeline.Items.Count && _timeline.Items[_nextItem].Start <= position)
         {
-            Begin(_timeline.Items[_nextItem++]);
+            ReplayTimeline.Item next = _timeline.Items[_nextItem++];
+
+            // Finish strokes that were complete before this event, so that an erase or move right after a
+            // stroke (within the same tick) finds that stroke on the page instead of missing it.
+            foreach (DrawingStroke drawing in _drawing.Where(d => d.Item.End <= next.Start).ToList())
+            {
+                Draw(drawing, next.Start);
+            }
+
+            Begin(next);
         }
 
         foreach (DrawingStroke stroke in _drawing.ToList())

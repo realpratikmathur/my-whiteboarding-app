@@ -22,8 +22,10 @@ namespace InkBoard;
 // Ghost strokes are ordinary platform strokes, built by InkStrokeBuilder from the recorded stroke's own ink
 // points, with the private colour and half the width. Half the width matters: as the real stroke is drawn
 // over its ghost it covers it completely, so no magenta shows at its anti-aliased edges (a blend of ink and
-// magenta is neither, and the filter could not remove it). Highlighter and pencil strokes are see-through,
-// so their ghost is removed the moment their replay starts instead.
+// magenta is neither, and the filter could not remove it). Pencil strokes are see-through,
+// so their ghost is removed the moment their replay starts instead. Highlighter strokes get no ghost at
+// all: a highlighter usually lies over writing that replays before it, and that writing would then be drawn
+// over a magenta band, leaving magenta-blended edges in the video (and hiding the ghost writing under it).
 public sealed partial class MainWindow
 {
     private const float GhostWidthFactor = 0.5f;
@@ -61,6 +63,11 @@ public sealed partial class MainWindow
         foreach (int key in end.Strokes.Where(InRecording).Order())
         {
             InkStroke source = _recordedList[key];
+            if (source.DrawingAttributes.DrawAsHighlighter)
+            {
+                continue;
+            }
+
             (double dx, double dy) = end.Offsets.GetValueOrDefault(key);
             Matrix3x2 transform = source.PointTransform * Matrix3x2.CreateTranslation((float)dx, (float)dy);
 
@@ -105,9 +112,7 @@ public sealed partial class MainWindow
         ghost.FitToCurve = source.FitToCurve;
         ghost.IgnorePressure = source.IgnorePressure;
         ghost.IgnoreTilt = source.IgnoreTilt;
-        ghost.DrawAsHighlighter = source.DrawAsHighlighter;
-        double factor = source.DrawAsHighlighter ? 1 : GhostWidthFactor;   // removed before it is covered anyway
-        ghost.Size = new Size(Math.Max(1, size.Width * factor), Math.Max(1, size.Height * factor));
+        ghost.Size = new Size(Math.Max(1, size.Width * GhostWidthFactor), Math.Max(1, size.Height * GhostWidthFactor));
         return ghost;
     }
 
