@@ -131,10 +131,11 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Back to the start: only the private notes are on the page.</summary>
+    /// <summary>Back to the start: only the private notes are on the page (and the ghost page, if chosen).</summary>
     private void RestartReplay()
     {
         _replayTimer.Stop();
+        ClearGhosts();
         ClearSelection();
         SelectObject(null);
 
@@ -157,6 +158,11 @@ public sealed partial class MainWindow
         _cameraTarget = null;
         _camera = new CameraFollower(FollowMode);
         _clock = new ReplayClock(_timeline.Length) { Speed = ReplayClock.Speeds[Math.Max(0, SpeedBox.SelectedIndex)] };
+        if (StartMode == ReplayStartMode.Ghost)
+        {
+            ShowGhostPage();
+        }
+
         CanvasScroller.ChangeView(0, 0, null, disableAnimation: true);
         UpdateReplayBar();
     }
@@ -274,11 +280,17 @@ public sealed partial class MainWindow
                 {
                     Item = item, Key = e.Strokes[0], Source = source, Points = source.GetInkPoints(),
                 });
+                if (IsSeeThrough(source))
+                {
+                    RemoveGhost(e.Strokes[0]);
+                }
+
                 break;
 
             case RecordedEventKind.StrokeAdd:
                 foreach (int key in e.Strokes.Where(InRecording))
                 {
+                    RemoveGhost(key);
                     _cameraTarget = Centre(ShowRecordedStroke(key).BoundingRect);
                 }
 
@@ -310,6 +322,7 @@ public sealed partial class MainWindow
                 break;
 
             case RecordedEventKind.ObjectAdd when e.Object is not null:
+                RemoveTextGhost(e.ObjectId);
                 PageObject added = e.Object.Clone();
                 _replayObjects[e.ObjectId] = added;
                 ShowObject(added);
@@ -394,6 +407,7 @@ public sealed partial class MainWindow
         {
             _cameraTarget = PenPosition(drawing, drawing.Points.Count);
             ShowRecordedStroke(drawing.Key);
+            RemoveGhost(drawing.Key);
             _drawing.Remove(drawing);
             return;
         }
