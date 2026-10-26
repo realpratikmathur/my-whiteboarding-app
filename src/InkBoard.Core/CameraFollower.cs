@@ -11,6 +11,12 @@ public enum ReplayFollowMode
     /// view), then eases over just far enough to keep it visible.
     /// </summary>
     EdgeNudge,
+
+    /// <summary>
+    /// The replay never moves the view: the presenter pans and zooms by hand (wheel, middle button, touch)
+    /// while it plays, and the writing may go off screen.
+    /// </summary>
+    Off,
 }
 
 /// <summary>
@@ -57,7 +63,9 @@ public sealed class CameraFollower
 
     public (double X, double Y) Step(
         double offsetX, double offsetY, double viewWidth, double viewHeight, double targetX, double targetY, double elapsedMs) =>
-        (_horizontal.Step(offsetX, viewWidth, targetX, elapsedMs), _vertical.Step(offsetY, viewHeight, targetY, elapsedMs));
+        Mode == ReplayFollowMode.Off
+            ? (offsetX, offsetY)
+            : (_horizontal.Step(offsetX, viewWidth, targetX, elapsedMs), _vertical.Step(offsetY, viewHeight, targetY, elapsedMs));
 
     /// <param name="low">Fraction of the view before which the spot is too close to the near edge.</param>
     /// <param name="high">Fraction of the view beyond which the spot is too close to the far edge.</param>

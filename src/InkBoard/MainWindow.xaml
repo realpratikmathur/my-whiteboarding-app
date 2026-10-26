@@ -281,9 +281,10 @@
                 MinWidth="190"
                 AutomationProperties.Name="How the view follows the writing"
                 SelectionChanged="OnFollowModeChanged"
-                ToolTipService.ToolTip="How the view follows the writing: keep it in the middle of the screen, or leave the view still and ease over only when the writing reaches the bottom or right edge">
+                ToolTipService.ToolTip="How the view follows the writing: keep it in the middle of the screen, leave the view still and ease over only when the writing reaches the bottom or right edge, or never move it (you pan and zoom yourself with the wheel, the middle mouse button or your fingers)">
                 <ComboBoxItem Content="Follow: centred" />
                 <ComboBoxItem Content="Follow: nudge at edges" />
+                <ComboBoxItem Content="Follow: off (move the view yourself)" />
             </ComboBox>
             <ComboBox
                 x:Name="StartBox"
