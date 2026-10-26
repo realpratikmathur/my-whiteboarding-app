@@ -255,7 +255,7 @@
             Grid.ColumnSpan="3"
             Padding="8,4"
             Background="{ThemeResource LayerFillColorDefaultBrush}"
-            ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto"
+            ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto"
             ColumnSpacing="8"
             Visibility="Collapsed">
             <Button x:Name="PlayPauseButton" AutomationProperties.Name="Play or pause" Click="OnPlayPauseClick">
@@ -285,17 +285,27 @@
                 <ComboBoxItem Content="Follow: centred" />
                 <ComboBoxItem Content="Follow: nudge at edges" />
             </ComboBox>
+            <ComboBox
+                x:Name="StartBox"
+                Grid.Column="4"
+                MinWidth="200"
+                AutomationProperties.Name="What the page shows when the replay starts"
+                SelectionChanged="OnStartModeChanged"
+                ToolTipService.ToolTip="Blank page: the page starts empty. Ghost page: the finished page is shown in the private colour (hidden from the video by the OBS filter) and the real ink replays over it, so you can see what comes next.">
+                <ComboBoxItem Content="Start: blank page" />
+                <ComboBoxItem Content="Start: ghost page (hidden in video)" />
+            </ComboBox>
             <ProgressBar
                 x:Name="ReplayProgress"
-                Grid.Column="4"
+                Grid.Column="5"
                 VerticalAlignment="Center" />
             <TextBlock
                 x:Name="ReplayTime"
-                Grid.Column="5"
+                Grid.Column="6"
                 MinWidth="90"
                 VerticalAlignment="Center"
                 TextAlignment="Right" />
-            <Button Grid.Column="6" Click="OnExitReplayClick" Content="Exit replay" />
+            <Button Grid.Column="7" Click="OnExitReplayClick" Content="Exit replay" />
         </Grid>
 
         <!-- Pages and subpages. -->

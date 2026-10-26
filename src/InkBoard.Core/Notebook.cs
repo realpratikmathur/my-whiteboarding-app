@@ -41,6 +41,9 @@ public sealed class Notebook
     /// <summary>The replay follow mode chosen last, so it is the default next time.</summary>
     public ReplayFollowMode ReplayFollow { get; set; }
 
+    /// <summary>The replay start mode chosen last, so it is the default next time.</summary>
+    public ReplayStartMode ReplayStart { get; set; }
+
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
 
     public static Notebook FromJson(string json) =>

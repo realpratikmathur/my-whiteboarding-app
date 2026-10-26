@@ -517,6 +517,37 @@ Differences from OneNote, by design of this version
 - No underline, strikethrough, highlight or text colours other than black and the private colour. Tell me
   if you want any of these and I will look at switching text boxes to a rich-text control.
 
+## Phase 18 — Replay over a ghost of the finished page
+
+Press Replay: the bar has a third box, "Start: blank page" / "Start: ghost page (hidden in video)".
+The choice is remembered. Changing it during a replay starts the replay over.
+
+In the app (what you see)
+- [ ] Ghost page selected: as soon as the replay bar appears, the whole finished lesson is on the page in
+      magenta, thinner than the real ink: handwriting, pencil, calligraphy, typed text (with its font and
+      size). Strokes that were lasso-moved during the lesson are shown where they ended up; strokes that were
+      erased during the lesson are not shown.
+- [ ] Press Play: each stroke is drawn again in its real colour over its magenta ghost, and the ghost ahead of
+      the pen stays visible until the stroke is finished, so you can see what comes next.
+- [ ] Typed text: its magenta ghost disappears the moment the real text starts being typed.
+- [ ] Highlighter strokes and pictures/PDFs have no ghost; they appear when they are replayed, as before.
+- [ ] Your private notes are on the page throughout, as before.
+- [ ] Pause, speed, both Follow modes, Restart and Exit replay work as before; after Exit the page is exactly
+      as it was.
+- [ ] "Start: blank page" behaves exactly as replay did before.
+
+In OBS (what the students see), with the Apply LUT filter set up as in Phase 12
+- [ ] At the start of a ghost replay the video shows an empty white page.
+- [ ] During the replay the video looks the same as a blank-page replay: only the replayed ink appears.
+      My software check found it identical apart from a handful of pixels; please look closely at:
+      the tip of the stroke being drawn, and places where a later stroke crosses writing that has already
+      replayed (both can show a few dark-violet pixels there, since ink blended with magenta is not removed
+      by the filter). Tell me if you can see them in the recording.
+- [ ] Zoomed in (200%+) and with thin pens: no magenta outline appears around replayed ink.
+
+Side-by-side with OneNote
+- [ ] OneNote has no equivalent; compare the replayed ink itself with OneNote's ink replay as in Phase 11.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

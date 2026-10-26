@@ -97,7 +97,9 @@ public sealed partial class MainWindow
         _replayTimer.Stop();
         ReplayBar.Visibility = Visibility.Collapsed;
 
-        // Put the real page back exactly as it was saved.
+        // Put the real page back exactly as it was saved (the reload removes the ghosts from the page).
+        _ghostStrokes.Clear();
+        _ghostTexts.Clear();
         _currentPage = null;
         _pageDirty = false;
         await OpenPageAsync(page);
@@ -131,10 +133,11 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Back to the start: only the private notes are on the page.</summary>
+    /// <summary>Back to the start: only the private notes are on the page (and the ghost page, if chosen).</summary>
     private void RestartReplay()
     {
         _replayTimer.Stop();
+        ClearGhosts();
         ClearSelection();
         SelectObject(null);
 
@@ -157,6 +160,11 @@ public sealed partial class MainWindow
         _cameraTarget = null;
         _camera = new CameraFollower(FollowMode);
         _clock = new ReplayClock(_timeline.Length) { Speed = ReplayClock.Speeds[Math.Max(0, SpeedBox.SelectedIndex)] };
+        if (StartMode == ReplayStartMode.Ghost)
+        {
+            ShowGhostPage();
+        }
+
         CanvasScroller.ChangeView(0, 0, null, disableAnimation: true);
         UpdateReplayBar();
     }
@@ -244,7 +252,16 @@ public sealed partial class MainWindow
 
         while (_nextItem < _timeline.Items.Count && _timeline.Items[_nextItem].Start <= position)
         {
-            Begin(_timeline.Items[_nextItem++]);
+            ReplayTimeline.Item next = _timeline.Items[_nextItem++];
+
+            // Finish strokes that were complete before this event, so that an erase or move right after a
+            // stroke (within the same tick) finds that stroke on the page instead of missing it.
+            foreach (DrawingStroke drawing in _drawing.Where(d => d.Item.End <= next.Start).ToList())
+            {
+                Draw(drawing, next.Start);
+            }
+
+            Begin(next);
         }
 
         foreach (DrawingStroke stroke in _drawing.ToList())
@@ -274,11 +291,17 @@ public sealed partial class MainWindow
                 {
                     Item = item, Key = e.Strokes[0], Source = source, Points = source.GetInkPoints(),
                 });
+                if (IsSeeThrough(source))
+                {
+                    RemoveGhost(e.Strokes[0]);
+                }
+
                 break;
 
             case RecordedEventKind.StrokeAdd:
                 foreach (int key in e.Strokes.Where(InRecording))
                 {
+                    RemoveGhost(key);
                     _cameraTarget = Centre(ShowRecordedStroke(key).BoundingRect);
                 }
 
@@ -310,6 +333,7 @@ public sealed partial class MainWindow
                 break;
 
             case RecordedEventKind.ObjectAdd when e.Object is not null:
+                RemoveTextGhost(e.ObjectId);
                 PageObject added = e.Object.Clone();
                 _replayObjects[e.ObjectId] = added;
                 ShowObject(added);
@@ -394,6 +418,7 @@ public sealed partial class MainWindow
         {
             _cameraTarget = PenPosition(drawing, drawing.Points.Count);
             ShowRecordedStroke(drawing.Key);
+            RemoveGhost(drawing.Key);
             _drawing.Remove(drawing);
             return;
         }

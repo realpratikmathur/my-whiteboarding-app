@@ -71,6 +71,9 @@ public sealed class RecordingState
     public HashSet<int> Strokes { get; } = [];
     public Dictionary<Guid, PageObject> Objects { get; } = [];
 
+    /// <summary>How far each stroke has been moved by lasso moves so far (absent: not moved).</summary>
+    public Dictionary<int, (double X, double Y)> Offsets { get; } = [];
+
     public static RecordingState AtEnd(Recording recording)
     {
         var state = new RecordingState();
@@ -91,6 +94,14 @@ public sealed class RecordingState
                 break;
             case RecordedEventKind.StrokeRemove:
                 Strokes.ExceptWith(e.Strokes);
+                break;
+            case RecordedEventKind.StrokeMove:
+                foreach (int key in e.Strokes)
+                {
+                    (double x, double y) = Offsets.GetValueOrDefault(key);
+                    Offsets[key] = (x + e.Dx, y + e.Dy);
+                }
+
                 break;
             case RecordedEventKind.ObjectAdd when e.Object is not null:
                 Objects[e.ObjectId] = e.Object.Clone();
@@ -182,4 +193,18 @@ public sealed class ReplayClock(double length)
         Position = 0;
         IsPlaying = false;
     }
+}
+
+/// <summary>What the page shows when a replay starts.</summary>
+public enum ReplayStartMode
+{
+    /// <summary>Only the private notes; everything else appears as it is replayed.</summary>
+    Blank,
+
+    /// <summary>
+    /// The finished lesson drawn as a ghost in the private-notes colour, which the OBS filter removes from
+    /// the video. Each part is replaced by the real ink or text as it is replayed, so the presenter can see
+    /// what comes next while the audience sees only what has been replayed.
+    /// </summary>
+    Ghost,
 }

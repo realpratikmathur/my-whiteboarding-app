@@ -21,6 +21,17 @@ public static class SelfTest
 {
     internal static string LogPath { get; private set; } = "";
 
+    /// <summary>Asks the test script to screenshot the window now, and waits until it has.</summary>
+    internal static async Task SnapshotAsync(string name)
+    {
+        string request = Path.Combine(Path.GetDirectoryName(LogPath)!, "snap-request.txt");
+        File.WriteAllText(request, name);
+        for (int i = 0; i < 300 && File.Exists(request); i++)
+        {
+            await Task.Delay(100);
+        }
+    }
+
     private static readonly Lazy<string?> NotebookOverride = new(() =>
     {
         string[] args = Environment.GetCommandLineArgs();
@@ -101,6 +112,9 @@ public static class SelfTest
                         break;
                     case "replay":
                         await window.RunReplayTestAsync(log);
+                        break;
+                    case "replay-ghost":
+                        await window.RunReplayGhostTestAsync(log);
                         break;
                     case "replay-nudge":
                         await window.RunReplayNudgeTestAsync(log);
