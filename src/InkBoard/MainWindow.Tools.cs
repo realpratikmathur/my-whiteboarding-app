@@ -67,6 +67,7 @@ public sealed partial class MainWindow
         {
             ZoomText.Text = $"{CanvasScroller.ZoomFactor * 100:0}%";
             UpdatePageExtent();
+            UpdateObjectChrome();   // picture handles keep their size on screen
         };
         CanvasScroller.SizeChanged += (_, _) => UpdatePageExtent();
         _undo.Changed += (_, _) => OnPageContentChanged();
@@ -197,7 +198,7 @@ public sealed partial class MainWindow
     private void OnActiveToolChangedForCanvas()
     {
         Presenter.InputProcessingConfiguration.Mode = ModeForActiveTool();
-        TextFormatBar.Visibility = ObjectToolActive ? Visibility.Visible : Visibility.Collapsed;
+        UpdateTextFormatBar();
         if (!LassoActive)
         {
             ClearSelection();
