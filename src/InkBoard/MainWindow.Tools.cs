@@ -272,7 +272,9 @@ public sealed partial class MainWindow
         else if (_draggingSelection)
         {
             var delta = new Point(position.X - _lastToolPoint.X, position.Y - _lastToolPoint.Y);
-            ShowSelection(_document.Container.MoveSelected(delta));
+            Rect? ink = _document.SelectedHandles().Count > 0 ? _document.Container.MoveSelected(delta) : null;
+            MoveObjects(_lassoObjects, delta.X, delta.Y);
+            ShowSelection(SelectionArea(ink));
             _dragTotal = new Point(_dragTotal.X + delta.X, _dragTotal.Y + delta.Y);
         }
         else if (_lassoPoints is not null)
@@ -314,15 +316,25 @@ public sealed partial class MainWindow
             _draggingSelection = false;
             if (_dragTotal != default)
             {
-                _undo.Push(new MoveStrokesStep(_document.SelectedHandles(), _dragTotal.X, _dragTotal.Y));
+                IReadOnlyList<int> strokes = _document.SelectedHandles();
+                List<PageObject> objects = [.. _lassoObjects];
+                (double dx, double dy) = (_dragTotal.X, _dragTotal.Y);
+                var objectMove = new ActionStep(() => MoveObjects(objects, -dx, -dy), () => MoveObjects(objects, dx, dy));
+                _undo.Push(strokes.Count == 0
+                    ? objectMove
+                    : objects.Count == 0
+                        ? new MoveStrokesStep(strokes, dx, dy)
+                        : new CompanionStep(new MoveStrokesStep(strokes, dx, dy), objectMove.UndoAction, objectMove.RedoAction));
             }
         }
         else if (_lassoPoints is not null)
         {
-            Rect bounds = _document.Container.SelectWithPolyLine(_lassoPoints);
+            Rect ink = _document.Container.SelectWithPolyLine(_lassoPoints);
+            List<Point2> loop = _lassoPoints.Select(p => new Point2(p.X, p.Y)).ToList();
+            _lassoObjects = _objects.Where(o => LassoMath.TakesIn(loop, o.X, o.Y, o.Width, o.Height)).ToList();
             _lassoPoints = null;
             LassoLine.Visibility = Visibility.Collapsed;
-            ShowSelection(bounds);
+            ShowSelection(SelectionArea(ink.Width > 0 || ink.Height > 0 ? ink : null));
         }
         else if (_eraseSession is not null)
         {
@@ -337,9 +349,38 @@ public sealed partial class MainWindow
 
     // ---- Selection ------------------------------------------------------------------------------
 
+    /// <summary>Pictures and text boxes taken in by the lasso (moved and deleted together with the ink).</summary>
+    private List<PageObject> _lassoObjects = [];
+
+    /// <summary>The box around the lassoed ink and the lassoed pictures and text boxes.</summary>
+    private Rect SelectionArea(Rect? ink)
+    {
+        Rect? area = ink;
+        foreach (PageObject obj in _lassoObjects)
+        {
+            var rect = new Rect(obj.X, obj.Y, Math.Max(obj.Width, 1), Math.Max(obj.Height, 1));
+            if (area is Rect so)
+            {
+                rect.Union(so);
+            }
+
+            area = rect;
+        }
+
+        return area ?? Rect.Empty;
+    }
+
+    private void MoveObjects(IEnumerable<PageObject> objects, double dx, double dy)
+    {
+        foreach (PageObject obj in objects)
+        {
+            SetObjectRect(obj, new Rect(obj.X + dx, obj.Y + dy, Math.Max(obj.Width, 1), Math.Max(obj.Height, 1)));
+        }
+    }
+
     private void ShowSelection(Rect bounds)
     {
-        if (bounds.Width <= 0 || bounds.Height <= 0)
+        if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
         {
             _selectionBounds = null;
             SelectionRect.Visibility = Visibility.Collapsed;
@@ -363,6 +404,7 @@ public sealed partial class MainWindow
 
         _selectionBounds = null;
         _lassoPoints = null;
+        _lassoObjects = [];
         _draggingSelection = false;
         SelectionRect.Visibility = Visibility.Collapsed;
         LassoLine.Visibility = Visibility.Collapsed;
@@ -371,13 +413,25 @@ public sealed partial class MainWindow
     private void DeleteSelection()
     {
         IReadOnlyList<int> selected = _document.SelectedHandles();
-        if (selected.Count == 0)
+        List<PageObject> objects = [.. _lassoObjects];
+        if (selected.Count == 0 && objects.Count == 0)
         {
             return;
         }
 
-        _document.Remove(selected);
-        _undo.Push(new RemoveStrokesStep(selected));
+        void HideAll() => objects.ForEach(HideObject);
+        void ShowAll() => objects.ForEach(ShowObject);
+        if (selected.Count > 0)
+        {
+            _document.Remove(selected);
+        }
+
+        HideAll();
+        _undo.Push(selected.Count == 0
+            ? new ActionStep(ShowAll, HideAll)
+            : objects.Count == 0
+                ? new RemoveStrokesStep(selected)
+                : new CompanionStep(new RemoveStrokesStep(selected), ShowAll, HideAll));
         ClearSelection();
     }
 

@@ -297,11 +297,20 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>The font bar is for text: shown with the select tool, except while a picture is selected.</summary>
-    private void UpdateTextFormatBar() =>
-        TextFormatBar.Visibility = ObjectToolActive && _selectedObject is not { Kind: PageObjectKind.Image }
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+    /// <summary>
+    /// The font bar is shown for as long as the select tool is active. With a picture selected its text controls
+    /// are only greyed out: hiding the bar would move the whole page up under the pointer in the middle of a
+    /// drag, so the picture jumped away from the mouse and could not be moved properly.
+    /// </summary>
+    private void UpdateTextFormatBar()
+    {
+        TextFormatBar.Visibility = ObjectToolActive ? Visibility.Visible : Visibility.Collapsed;
+        bool picture = _selectedObject is { Kind: PageObjectKind.Image };
+        FontBox.IsEnabled = FontSizeBox.IsEnabled = BoldToggle.IsEnabled = ItalicToggle.IsEnabled = !picture;
+        FormatHint.Text = picture
+            ? "Picture selected: drag it to move, drag a handle to resize, Delete to remove"
+            : "Applies to the selected text box and to new ones";
+    }
 
     /// <summary>Removes a text box that was left without text: a stray tap, or a box whose text was deleted.</summary>
     private void DiscardIfEmpty(PageObject obj)

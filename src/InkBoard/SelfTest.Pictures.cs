@@ -50,7 +50,7 @@ public sealed partial class MainWindow
             PageObject picture = _objects.Single(o => o.Kind == PageObjectKind.Image);
             log.AppendLine($"after insert: tool {(ReferenceEquals(Toolbar.ActiveTool, TextButton) ? "select (A)" : "other")}, " +
                 $"selected {(ReferenceEquals(_selectedObject, picture) ? "the picture" : "nothing")}, " +
-                $"handles shown {_handleViews.Values.Count(v => v.Visibility == Visibility.Visible)}, text font bar shown {TextFormatBar.Visibility == Visibility.Visible} (expect False); picture {RectText(picture)}");
+                $"handles shown {_handleViews.Values.Count(v => v.Visibility == Visibility.Visible)}, text font bar shown {TextFormatBar.Visibility == Visibility.Visible} with its controls enabled {FontBox.IsEnabled} (expect True, False: it stays in place, greyed out); picture {RectText(picture)}");
             await SelfTest.SnapshotAsync("pictures-selected");
             (double x0, double y0, double w0, double h0) = (picture.X, picture.Y, picture.Width, picture.Height);
 

@@ -617,6 +617,19 @@ Verified with real mouse and keyboard input; please check with the pen and a fin
 - [ ] Drag left and right repeatedly, then play: the replay continues correctly from where you let go.
 - [ ] Your private notes never blink.
 
+## Phase 23 — Pictures stay movable; lasso takes in pictures
+
+- [ ] Insert a picture, move it. Write with a pen (also over the picture), record, replay, rewind, exit replay.
+      Pick the select tool ("A") and drag the picture: it moves exactly with the pointer, and its handles
+      resize it. The page does not jump when you press on the picture.
+- [ ] With the select tool, the font bar under the toolbar stays where it is; with a picture selected its
+      font controls are greyed out.
+- [ ] Lasso (dashed square) a loop around a picture and some handwriting: both are selected (one dashed box
+      around them); drag inside the box: they move together. Ctrl+Z puts both back.
+- [ ] Lasso around just a picture, press Delete: it is removed; Ctrl+Z brings it back.
+- [ ] Lasso around a text box: it moves with the ink as well.
+- [ ] Side-by-side with OneNote: lasso a picture with handwriting in both and move it.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.
