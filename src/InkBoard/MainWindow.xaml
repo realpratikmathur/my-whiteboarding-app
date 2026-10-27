@@ -133,13 +133,13 @@
                 <InkToolbarCustomToolButton
                     x:Name="LassoButton"
                     AutomationProperties.Name="Lasso select"
-                    ToolTipService.ToolTip="Lasso select (drag inside the selection to move, Delete to remove)">
+                    ToolTipService.ToolTip="Lasso select: draw a loop around ink, pictures and text; drag inside the selection to move it all, Delete to remove">
                     <FontIcon Glyph="&#xEF20;" />
                 </InkToolbarCustomToolButton>
                 <InkToolbarCustomToolButton
                     x:Name="TextButton"
-                    AutomationProperties.Name="Text and pictures"
-                    ToolTipService.ToolTip="Text and pictures (tap to type; tap a text box or picture to select, drag to move)">
+                    AutomationProperties.Name="Select and type"
+                    ToolTipService.ToolTip="Select and type: tap a picture or text box to select it, drag to move, drag a handle to resize; tap an empty spot to type">
                     <FontIcon Glyph="&#xE8D2;" />
                 </InkToolbarCustomToolButton>
                 <InkToolbarStencilButton />
@@ -245,6 +245,7 @@
                 VerticalAlignment="Center"
                 Opacity="0.7"
                 Style="{ThemeResource CaptionTextBlockStyle}"
+                x:Name="FormatHint"
                 Text="Applies to the selected text box and to new ones" />
         </StackPanel>
 
