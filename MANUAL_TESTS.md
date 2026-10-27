@@ -605,6 +605,18 @@ Verified with real mouse and keyboard input; please check with the pen and a fin
       (on an 800-stroke test lesson a jump took 25-200 ms).
 - [ ] Exit replay after seeking: the page is exactly as it was before the replay.
 
+## Phase 22 — Rewinding without the page flashing
+
+- [ ] During a replay, drag the slider's thumb slowly and then quickly to the LEFT across a page full of ink:
+      the ink disappears stroke by stroke back to that moment; the page never flashes empty or repaints as a
+      whole. Same with clicking earlier on the slider.
+- [ ] Same with "Start: ghost page": the magenta ghosts reappear where strokes are taken away, without a flash;
+      in OBS the video shows only the replayed ink at every moment.
+- [ ] Text boxes and pictures that were already on the page at the earlier moment stay put while rewinding
+      (no blink); ones added later disappear.
+- [ ] Drag left and right repeatedly, then play: the replay continues correctly from where you let go.
+- [ ] Your private notes never blink.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

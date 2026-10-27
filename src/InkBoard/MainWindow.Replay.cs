@@ -328,21 +328,23 @@ public sealed partial class MainWindow
         bool playing = _clock.IsPlaying;
         if (position < _clock.Position)
         {
-            RestartReplay(resetView: false, ghostsAt: position);
+            RewindTo(position);
         }
-
-        _clock.Seek(position);
-        _ghostRemovals = [];
-        _strokeAdds = [];
-        try
+        else
         {
-            ApplyUpTo(position);
-        }
-        finally
-        {
-            FlushStrokeAdds();
-            _strokeAdds = null;
-            FlushGhostRemovals();
+            _clock.Seek(position);
+            _ghostRemovals = [];
+            _strokeAdds = [];
+            try
+            {
+                ApplyUpTo(position);
+            }
+            finally
+            {
+                FlushStrokeAdds();
+                _strokeAdds = null;
+                FlushGhostRemovals();
+            }
         }
 
         if (FollowMode != ReplayFollowMode.Off)
@@ -362,6 +364,180 @@ public sealed partial class MainWindow
         }
 
         UpdateReplayBar();
+    }
+
+    private static bool Overlaps(Rect a, Rect b) =>
+        a.X <= b.X + b.Width && b.X <= a.X + a.Width && a.Y <= b.Y + b.Height && b.Y <= a.Y + a.Height;
+
+    /// <summary>What the last rewind changed on the page (for the self-tests).</summary>
+    internal string LastRewindChanges { get; private set; } = "";
+
+    /// <summary>True while a rewind builds the page at its target moment off screen (see RewindTo).</summary>
+    private bool _offline;
+
+    /// <summary>
+    /// Goes back to an earlier moment without the page ever being emptied on screen. The replay is run again
+    /// from the start up to that moment "off screen": strokes are collected instead of being put on the page,
+    /// text boxes and pictures are only data. Then the page is switched over in one go: the new strokes are
+    /// added first and only then the old ones removed, and text boxes and pictures that are still there keep
+    /// their place (only what changed is updated). Emptying the page first and rebuilding it made the ink
+    /// layer show the empty page for a moment on every step of a drag to the left.
+    /// </summary>
+    private void RewindTo(double position)
+    {
+        _replayTimer.Stop();
+        var oldFull = new Dictionary<int, InkStroke>(_replayStrokes);
+        var oldOffsets = new Dictionary<int, Vector2>(_replayOffsets);
+        var oldGhosts = new Dictionary<int, InkStroke>(_ghostStrokes);
+        List<InkStroke> oldPartials = _drawing.Where(d => d.Partial is not null).Select(d => d.Partial!).ToList();
+        var oldObjects = new Dictionary<Guid, PageObject>(_replayObjects);
+        var oldTextGhosts = new Dictionary<Guid, PageObject>(_ghostTexts);
+
+        _offline = true;
+        _strokeAdds = [];
+        try
+        {
+            _replayStrokes.Clear();
+            _replayOffsets.Clear();
+            _replayObjects.Clear();
+            _drawing.Clear();
+            _ghostStrokes.Clear();
+            _ghostTexts.Clear();
+            _nextItem = 0;
+            _cameraTarget = null;
+            _clock = new ReplayClock(_timeline.Length) { Speed = _clock.Speed };
+            if (StartMode == ReplayStartMode.Ghost)
+            {
+                ShowGhostPage(position);
+            }
+
+            _clock.Seek(position);
+            ApplyUpTo(position);
+        }
+        finally
+        {
+            _offline = false;
+        }
+
+        // Strokes and ghosts that are on the page already, unchanged, stay where they are; only the rest is
+        // swapped. A small step back then removes a few strokes and adds nothing.
+        List<InkStroke> collected = _strokeAdds;
+        _strokeAdds = null;
+        var dropped = new HashSet<InkStroke>(ReferenceEqualityComparer.Instance);   // collected but not needed
+        var kept = new HashSet<InkStroke>(ReferenceEqualityComparer.Instance);      // already on the page
+        foreach ((int key, InkStroke clone) in _replayStrokes.ToList())
+        {
+            if (oldFull.TryGetValue(key, out InkStroke? old) && oldOffsets.GetValueOrDefault(key) == _replayOffsets.GetValueOrDefault(key))
+            {
+                dropped.Add(clone);
+                kept.Add(old);
+                _replayStrokes[key] = old;
+            }
+        }
+
+        var reappearing = new List<InkStroke>();
+        foreach ((int key, InkStroke ghost) in _ghostStrokes.ToList())
+        {
+            if (oldGhosts.TryGetValue(key, out InkStroke? old))
+            {
+                dropped.Add(ghost);
+                kept.Add(old);
+                _ghostStrokes[key] = old;
+            }
+            else
+            {
+                reappearing.Add(ghost);
+            }
+        }
+
+        List<InkStroke> fresh = collected.Where(stroke => !dropped.Contains(stroke)).ToList();
+
+        // A ghost that comes back is added on top of the page. Ink that it crosses must stay on top of it
+        // (magenta over ink would show as a white gap in the video), so such ink is put back on top as well.
+        if (reappearing.Count > 0)
+        {
+            List<Rect> ghostAreas = reappearing.Select(g => g.BoundingRect).ToList();
+            foreach ((int key, InkStroke stroke) in _replayStrokes.ToList())
+            {
+                Rect area = stroke.BoundingRect;
+                if (kept.Contains(stroke) && ghostAreas.Any(g => Overlaps(g, area)))
+                {
+                    InkStroke onTop = stroke.Clone();
+                    fresh.Add(onTop);
+                    kept.Remove(stroke);
+                    _replayStrokes[key] = onTop;
+                }
+            }
+        }
+
+        // Switch the ink over: new first, then old out, so no moment shows an empty page.
+        if (fresh.Count > 0)
+        {
+            _document.Container.AddStrokes(fresh);
+        }
+
+        List<InkStroke> outdated = oldFull.Values.Concat(oldGhosts.Values).Concat(oldPartials).Where(old => !kept.Contains(old)).ToList();
+        if (outdated.Count > 0)
+        {
+            foreach (InkStroke old in outdated)
+            {
+                old.Selected = true;
+            }
+
+            _document.Container.DeleteSelected();
+        }
+
+        LastRewindChanges = $"{fresh.Count} added, {outdated.Count} removed, {kept.Count} kept";
+
+        // Text boxes and pictures: keep the ones still there and update only what changed.
+        foreach ((Guid id, PageObject target) in _replayObjects.ToList())
+        {
+            if (!oldObjects.Remove(id, out PageObject? shown))
+            {
+                ShowObject(target);
+                continue;
+            }
+
+            bool resized = shown.Kind == PageObjectKind.Image && (shown.Width, shown.Height) != (target.Width, target.Height);
+            if ((shown.X, shown.Y) != (target.X, target.Y) || resized)
+            {
+                SetObjectRect(shown, new Rect(target.X, target.Y, Math.Max(target.Width, 1), Math.Max(target.Height, 1)));
+            }
+
+            if (shown.Text != target.Text)
+            {
+                SetText(shown, target.Text);
+            }
+
+            if (!shown.HasSameStyleAs(target))
+            {
+                SetTextStyle(shown, target);
+            }
+
+            _replayObjects[id] = shown;
+        }
+
+        foreach (PageObject gone in oldObjects.Values)
+        {
+            HideObject(gone);
+        }
+
+        foreach ((Guid id, PageObject ghost) in _ghostTexts.ToList())
+        {
+            if (oldTextGhosts.Remove(id, out PageObject? shownGhost))
+            {
+                _ghostTexts[id] = shownGhost;   // a text ghost never changes: keep the one on screen
+            }
+            else
+            {
+                ShowTextGhost(ghost);
+            }
+        }
+
+        foreach (PageObject gone in oldTextGhosts.Values)
+        {
+            HideObject(gone);
+        }
     }
 
     private void OnReplaySliderChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -443,6 +619,43 @@ public sealed partial class MainWindow
 
                 break;
 
+            case RecordedEventKind.StrokeRemove when _offline:
+                foreach (int key in e.Strokes)
+                {
+                    if (_replayStrokes.Remove(key, out InkStroke? collected))
+                    {
+                        _strokeAdds!.Remove(collected);
+                    }
+                }
+
+                break;
+
+            case RecordedEventKind.StrokeMove when _offline:
+                var offset = new Vector2((float)e.Dx, (float)e.Dy);
+                Rect? movedTo = null;
+                foreach (int key in e.Strokes)
+                {
+                    _replayOffsets[key] = _replayOffsets.GetValueOrDefault(key) + offset;
+                    if (_replayStrokes.TryGetValue(key, out InkStroke? collected))
+                    {
+                        collected.PointTransform *= Matrix3x2.CreateTranslation(offset);
+                        Rect bounds = collected.BoundingRect;
+                        if (movedTo is Rect union)
+                        {
+                            bounds.Union(union);
+                        }
+
+                        movedTo = bounds;
+                    }
+                }
+
+                if (movedTo is Rect area)
+                {
+                    _cameraTarget = Centre(area);
+                }
+
+                break;
+
             case RecordedEventKind.StrokeRemove:
                 FlushStrokeAdds();
                 SelectReplayStrokes(e.Strokes, selected: true);
@@ -474,7 +687,10 @@ public sealed partial class MainWindow
                 RemoveTextGhost(e.ObjectId);
                 PageObject added = e.Object.Clone();
                 _replayObjects[e.ObjectId] = added;
-                ShowObject(added);
+                if (!_offline)
+                {
+                    ShowObject(added);
+                }
                 _cameraTarget = new Point(added.X, added.Y);
                 break;
 
@@ -531,6 +747,11 @@ public sealed partial class MainWindow
     /// <summary>Puts collected strokes on the page; needed before anything selects or removes strokes.</summary>
     private void FlushStrokeAdds()
     {
+        if (_offline)
+        {
+            return;   // a rewind puts everything on the page at the end, in one go
+        }
+
         // Ghosts first: deleting is quick on a page that has not just received hundreds of new strokes, slow
         // right after (the delete waits for the ink layer to finish drawing them).
         if (_ghostRemovals is { Count: > 0 })
@@ -581,8 +802,16 @@ public sealed partial class MainWindow
 
         if (drawing.Partial is InkStroke previous)
         {
-            previous.Selected = true;
-            _document.Container.DeleteSelected();
+            if (_offline)
+            {
+                _strokeAdds!.Remove(previous);
+            }
+            else
+            {
+                previous.Selected = true;
+                _document.Container.DeleteSelected();
+            }
+
             drawing.Partial = null;
         }
 
@@ -599,7 +828,15 @@ public sealed partial class MainWindow
         builder.SetDefaultDrawingAttributes(drawing.Source.DrawingAttributes);
         InkStroke partial = builder.CreateStrokeFromInkPoints(
             drawing.Points.Take(count), PlacedTransform(drawing.Source, drawing.Key));
-        _document.Container.AddStroke(partial);
+        if (_offline)
+        {
+            _strokeAdds!.Add(partial);
+        }
+        else
+        {
+            _document.Container.AddStroke(partial);
+        }
+
         drawing.Partial = partial;
         drawing.Shown = count;
         _cameraTarget = PenPosition(drawing, count);

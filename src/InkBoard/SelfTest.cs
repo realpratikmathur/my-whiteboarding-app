@@ -113,6 +113,9 @@ public static class SelfTest
                     case "replay":
                         await window.RunReplayTestAsync(log);
                         break;
+                    case "rewind-flicker":
+                        await window.RunRewindFlickerTestAsync(log, argument);
+                        break;
                     case "replay-seek":
                         await window.RunReplaySeekTestAsync(log);
                         break;

@@ -122,6 +122,13 @@ public sealed partial class MainWindow
         log.AppendLine($"ghost end: {GhostState()} (expect 0 ghosts, {pageStrokes - 1} real, 1 note, 1 box)");
         await SelfTest.SnapshotAsync("ghost-end");
 
+        // Rewind from the end to the middle: ghosts come back (the crossing stroke's among them) and must end up
+        // under the ink that has already replayed, exactly as when playing from the start.
+        SeekReplay(middle);
+        await Task.Delay(500);
+        log.AppendLine($"rewound to the middle: {GhostState()}; rewind changed {LastRewindChanges}");
+        await SelfTest.SnapshotAsync("ghost-rewound-middle");
+
         // ---- The same moment with a blank-page replay ----
         StartBox.SelectedIndex = 0;     // starts the replay over
         await Task.Delay(300);
