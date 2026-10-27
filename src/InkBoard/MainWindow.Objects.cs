@@ -25,7 +25,9 @@ namespace InkBoard;
 // a text box is edited by giving it keyboard focus.
 public sealed partial class MainWindow
 {
-    private const double ResizeHandleSize = 18;
+    // Picture handles keep the same size on screen at any zoom (pixels at 100%).
+    private const double HandleScreenSize = 10;
+    private const double HandleHitScreenRadius = 12;
     private const double PdfRenderScale = 2;
     private const double PdfPageGap = 16;
     private const double MaxPastedImageWidth = 1200;
@@ -38,6 +40,8 @@ public sealed partial class MainWindow
     private enum ObjectDrag { None, Move, Resize }
 
     private PageObject? _selectedObject;
+    private readonly Dictionary<ResizeHandle, Microsoft.UI.Xaml.Shapes.Rectangle> _handleViews = [];
+    private ResizeHandle _dragHandle;
     private ObjectDrag _objectDrag;
     private Point _objectDragStart;
     private Rect _objectStartRect;
@@ -286,11 +290,18 @@ public sealed partial class MainWindow
         }
 
         UpdateObjectChrome();
+        UpdateTextFormatBar();
         if (obj is { Kind: PageObjectKind.Text })
         {
             ShowStyleInFormatBar(obj);
         }
     }
+
+    /// <summary>The font bar is for text: shown with the select tool, except while a picture is selected.</summary>
+    private void UpdateTextFormatBar() =>
+        TextFormatBar.Visibility = ObjectToolActive && _selectedObject is not { Kind: PageObjectKind.Image }
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
     /// <summary>Removes a text box that was left without text: a stray tap, or a box whose text was deleted.</summary>
     private void DiscardIfEmpty(PageObject obj)
@@ -312,33 +323,95 @@ public sealed partial class MainWindow
         }
     }
 
+    /// <summary>Selection box, and for pictures the eight resize handles, drawn at a constant size on screen.</summary>
     private void UpdateObjectChrome()
     {
+        if (_handleViews.Count == 0)
+        {
+            foreach (ResizeHandle handle in Enum.GetValues<ResizeHandle>())
+            {
+                var view = new Microsoft.UI.Xaml.Shapes.Rectangle
+                {
+                    Fill = new SolidColorBrush(Colors.White),
+                    Stroke = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x0A, 0x64, 0xD8)),
+                    Visibility = Visibility.Collapsed,
+                };
+                ChromeLayer.Children.Add(view);
+                _handleViews[handle] = view;
+            }
+        }
+
+        bool selected = _selectedObject is not null;
+        bool resizable = _selectedObject is { Kind: PageObjectKind.Image };
+        ObjectSelectionRect.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var view in _handleViews.Values)
+        {
+            view.Visibility = resizable ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         if (_selectedObject is not PageObject obj)
         {
-            ObjectSelectionRect.Visibility = Visibility.Collapsed;
-            ResizeHandle.Visibility = Visibility.Collapsed;
             return;
         }
 
-        Canvas.SetLeft(ObjectSelectionRect, obj.X - 3);
-        Canvas.SetTop(ObjectSelectionRect, obj.Y - 3);
-        ObjectSelectionRect.Width = Math.Max(obj.Width, 1) + 6;
-        ObjectSelectionRect.Height = Math.Max(obj.Height, 1) + 6;
-        ObjectSelectionRect.Visibility = Visibility.Visible;
+        double pixel = 1 / CanvasScroller.ZoomFactor;   // one screen pixel in page units
+        double gap = resizable ? 0 : 3 * pixel;
+        Canvas.SetLeft(ObjectSelectionRect, obj.X - gap);
+        Canvas.SetTop(ObjectSelectionRect, obj.Y - gap);
+        ObjectSelectionRect.Width = Math.Max(obj.Width, 1) + 2 * gap;
+        ObjectSelectionRect.Height = Math.Max(obj.Height, 1) + 2 * gap;
+        ObjectSelectionRect.StrokeThickness = 1.5 * pixel;
+        if (!resizable)
+        {
+            return;
+        }
 
-        bool resizable = obj.Kind == PageObjectKind.Image;
-        Canvas.SetLeft(ResizeHandle, obj.Right - ResizeHandleSize / 2);
-        Canvas.SetTop(ResizeHandle, obj.Bottom - ResizeHandleSize / 2);
-        ResizeHandle.Visibility = resizable ? Visibility.Visible : Visibility.Collapsed;
+        double size = HandleScreenSize * pixel;
+        foreach ((ResizeHandle handle, var view) in _handleViews)
+        {
+            (double x, double y) = ResizeMath.HandlePosition(obj.X, obj.Y, obj.Width, obj.Height, handle);
+            view.Width = view.Height = size;
+            view.StrokeThickness = 1.5 * pixel;
+            Canvas.SetLeft(view, x - size / 2);
+            Canvas.SetTop(view, y - size / 2);
+        }
     }
 
     private PageObject? HitTestObject(Point p) =>
         _objects.AsEnumerable().Reverse().FirstOrDefault(o => o.Contains(p.X, p.Y));
 
-    private bool OnResizeHandle(Point p) =>
-        _selectedObject is { Kind: PageObjectKind.Image } obj
-        && Math.Abs(p.X - obj.Right) <= ResizeHandleSize && Math.Abs(p.Y - obj.Bottom) <= ResizeHandleSize;
+    /// <summary>The handle of the selected picture under a page point, if any.</summary>
+    private ResizeHandle? HandleAt(Point p)
+    {
+        if (_selectedObject is not { Kind: PageObjectKind.Image } obj)
+        {
+            return null;
+        }
+
+        double radius = HandleHitScreenRadius / CanvasScroller.ZoomFactor;
+        foreach (ResizeHandle handle in Enum.GetValues<ResizeHandle>())
+        {
+            (double x, double y) = ResizeMath.HandlePosition(obj.X, obj.Y, obj.Width, obj.Height, handle);
+            if (Math.Abs(p.X - x) <= radius && Math.Abs(p.Y - y) <= radius)
+            {
+                return handle;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>After inserting or pasting: select the (first) new picture with the select tool, ready to drag.</summary>
+    private void SelectInsertedPicture(PageObject? picture)
+    {
+        if (picture is null)
+        {
+            return;
+        }
+
+        Toolbar.ActiveTool = TextButton;
+        SelectObject(picture);
+    }
 
     // ---- Tool input (from InkUnprocessedInput) --------------------------------------------------
 
@@ -347,9 +420,10 @@ public sealed partial class MainWindow
         _objectDragged = false;
         _objectDragStart = p;
 
-        if (OnResizeHandle(p))
+        if (HandleAt(p) is ResizeHandle handle)
         {
             _objectDrag = ObjectDrag.Resize;
+            _dragHandle = handle;
             _objectStartRect = RectOf(_selectedObject!);
             return;
         }
@@ -398,8 +472,9 @@ public sealed partial class MainWindow
         }
         else
         {
-            double width = Math.Max(24, start.Width + dx);
-            SetObjectRect(obj, new Rect(start.X, start.Y, width, width * start.Height / start.Width));
+            (double x, double y, double width, double height) =
+                ResizeMath.Resize(start.X, start.Y, start.Width, start.Height, _dragHandle, dx, dy);
+            SetObjectRect(obj, new Rect(x, y, width, height));
         }
     }
 
@@ -525,7 +600,7 @@ public sealed partial class MainWindow
 
     private async Task<string> InsertFilesAsync(IEnumerable<string> paths, Point at)
     {
-        int images = 0, pdfPages = 0;
+        int images = 0, pdfPages = 0, objectsBefore = _objects.Count;
         foreach (string path in paths)
         {
             string extension = Path.GetExtension(path).ToLowerInvariant();
@@ -546,6 +621,7 @@ public sealed partial class MainWindow
             at = new Point(at.X, ObjectBounds().Bottom + PdfPageGap);
         }
 
+        SelectInsertedPicture(_objects.Skip(objectsBefore).FirstOrDefault(o => o.Kind == PageObjectKind.Image));
         return images + pdfPages == 0
             ? "Nothing to insert (images and PDFs only)"
             : $"Inserted {images} image(s), {pdfPages} PDF page(s)";
@@ -567,7 +643,7 @@ public sealed partial class MainWindow
             RandomAccessStreamReference reference = await content.GetBitmapAsync();
             using IRandomAccessStreamWithContentType stream = await reference.OpenReadAsync();
             (string name, double width, double height) = await SaveImageAssetAsync(stream);
-            AddImageObject(name, ViewportOrigin(), width, height);
+            SelectInsertedPicture(AddImageObject(name, ViewportOrigin(), width, height));
             StatusText.Text = "Pasted image";
             return true;
         }

@@ -565,6 +565,24 @@ and your own fingers on the Surface are for you to check.
 - [ ] Works together with "Start: ghost page".
 - [ ] Switching to "Follow: centred" or "nudge at edges" during the replay: the view starts following again.
 
+## Phase 20 — Moving and resizing pictures and PDF pages
+
+Verified with real mouse drags; please check with the pen and a finger.
+
+- [ ] File > Insert picture (or paste an image): the picture appears selected, with a blue outline and 8 small
+      square handles, and the "A" (select) tool is active.
+- [ ] Drag inside the picture: it moves with the pointer. No ink is drawn.
+- [ ] Drag a corner handle: the picture grows/shrinks keeping its proportions; the opposite corner stays put.
+- [ ] Drag a side handle (top, bottom, left, right): only that direction stretches.
+- [ ] Handles stay the same small size when zoomed in or out, and are still easy to grab.
+- [ ] Insert a PDF: its first page is selected. Tap any other page to select it, then move or resize it.
+- [ ] To go back to writing, pick a pen. To select a picture later, pick "A" and tap it.
+- [ ] Delete removes the selected picture; Ctrl+Z undoes moves, resizes and deletes one at a time.
+- [ ] Ink drawn on top of a picture stays where it is when the picture moves (as in OneNote).
+- [ ] Record while moving/resizing a picture: the replay shows it.
+- [ ] With the pen: a quick tap on a picture with the "A" tool selects it; pen drags move/resize like the mouse.
+- [ ] Side-by-side with OneNote: insert the same picture in both and compare moving/resizing.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

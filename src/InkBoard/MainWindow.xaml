@@ -375,8 +375,8 @@
                 <!-- Wet and dry ink are both rendered by the platform InkCanvas. The app draws no ink. -->
                 <InkCanvas x:Name="InkSurface" AutomationProperties.Name="Whiteboard" />
 
-                <!-- Selection chrome only (lasso outline and selection box). Never used for ink. -->
-                <Canvas IsHitTestVisible="False">
+                <!-- Selection chrome only (lasso outline, selection boxes, picture handles). Never used for ink. -->
+                <Canvas x:Name="ChromeLayer" IsHitTestVisible="False">
                     <Polyline
                         x:Name="LassoLine"
                         Stroke="#FF0A64D8"
@@ -385,14 +385,6 @@
                         Visibility="Collapsed" />
                     <Rectangle
                         x:Name="ObjectSelectionRect"
-                        Stroke="#FF0A64D8"
-                        StrokeThickness="1.5"
-                        Visibility="Collapsed" />
-                    <Rectangle
-                        x:Name="ResizeHandle"
-                        Width="18"
-                        Height="18"
-                        Fill="White"
                         Stroke="#FF0A64D8"
                         StrokeThickness="1.5"
                         Visibility="Collapsed" />

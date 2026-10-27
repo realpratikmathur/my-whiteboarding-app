@@ -58,8 +58,9 @@ public sealed partial class MainWindow
 
         // Move and resize the picture as the tool would, then undo/redo everything.
         SelectObject(picture);
-        OnObjectToolPressed(new Point(picture.X + 5, picture.Y + 5));
-        OnObjectToolMoved(new Point(picture.X + 45, picture.Y + 25));
+        // Grab inside the picture, away from its resize handles.
+        OnObjectToolPressed(new Point(picture.X + 40, picture.Y + 40));
+        OnObjectToolMoved(new Point(picture.X + 80, picture.Y + 60));
         OnObjectToolReleased();
         log.AppendLine($"picture moved to {picture.X},{picture.Y} (expect 100,80)");
         Root.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
