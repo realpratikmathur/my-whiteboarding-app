@@ -255,13 +255,20 @@
             Grid.ColumnSpan="3"
             Padding="8,4"
             Background="{ThemeResource LayerFillColorDefaultBrush}"
-            ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto"
+            ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto"
             ColumnSpacing="8"
+            RowDefinitions="Auto,Auto"
+            RowSpacing="2"
             Visibility="Collapsed">
-            <Button x:Name="PlayPauseButton" AutomationProperties.Name="Play or pause" Click="OnPlayPauseClick">
+            <Button
+                x:Name="PlayPauseButton"
+                Grid.Row="1"
+                AutomationProperties.Name="Play or pause"
+                Click="OnPlayPauseClick">
                 <FontIcon x:Name="PlayPauseIcon" FontSize="16" Glyph="&#xE768;" />
             </Button>
             <Button
+                Grid.Row="1"
                 Grid.Column="1"
                 AutomationProperties.Name="Restart"
                 Click="OnRestartReplayClick"
@@ -270,6 +277,7 @@
             </Button>
             <ComboBox
                 x:Name="SpeedBox"
+                Grid.Row="1"
                 Grid.Column="2"
                 MinWidth="84"
                 AutomationProperties.Name="Playback speed"
@@ -277,6 +285,7 @@
                 ToolTipService.ToolTip="Playback speed" />
             <ComboBox
                 x:Name="FollowBox"
+                Grid.Row="1"
                 Grid.Column="3"
                 MinWidth="190"
                 AutomationProperties.Name="How the view follows the writing"
@@ -288,6 +297,7 @@
             </ComboBox>
             <ComboBox
                 x:Name="StartBox"
+                Grid.Row="1"
                 Grid.Column="4"
                 MinWidth="200"
                 AutomationProperties.Name="What the page shows when the replay starts"
@@ -296,17 +306,30 @@
                 <ComboBoxItem Content="Start: blank page" />
                 <ComboBoxItem Content="Start: ghost page (hidden in video)" />
             </ComboBox>
-            <ProgressBar
-                x:Name="ReplayProgress"
-                Grid.Column="5"
-                VerticalAlignment="Center" />
+            <Slider
+                x:Name="ReplaySlider"
+                Grid.ColumnSpan="6"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="Replay position"
+                LargeChange="30000"
+                Minimum="0"
+                SmallChange="5000"
+                StepFrequency="10"
+                ToolTipService.ToolTip="Drag or click to fast-forward or rewind"
+                ValueChanged="OnReplaySliderChanged" />
             <TextBlock
                 x:Name="ReplayTime"
                 Grid.Column="6"
+                Margin="8,0,0,0"
                 MinWidth="90"
                 VerticalAlignment="Center"
                 TextAlignment="Right" />
-            <Button Grid.Column="7" Click="OnExitReplayClick" Content="Exit replay" />
+            <Button
+                Grid.Row="1"
+                Grid.Column="6"
+                HorizontalAlignment="Right"
+                Click="OnExitReplayClick"
+                Content="Exit replay" />
         </Grid>
 
         <!-- Pages and subpages. -->

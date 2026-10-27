@@ -56,14 +56,20 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Puts the finished lesson on the page as a ghost in the private colour.</summary>
-    private void ShowGhostPage()
+    /// <summary>
+    /// Puts the finished lesson on the page as a ghost in the private colour. When rewinding to a moment
+    /// (<paramref name="at"/>), ghosts that would already be gone by then are left out instead of being added
+    /// and removed again: every change makes the ink layer redraw the page, which is slow on a full page.
+    /// </summary>
+    private void ShowGhostPage(double at = -1)
     {
         RecordingState end = RecordingState.AtEnd(_recording);
+        (HashSet<int> goneStrokes, HashSet<Guid> goneTexts) = at >= 0 ? GhostsGoneBy(at) : ([], []);
+        var ghosts = new List<InkStroke>();
         foreach (int key in end.Strokes.Where(InRecording).Order())
         {
             InkStroke source = _recordedList[key];
-            if (source.DrawingAttributes.DrawAsHighlighter)
+            if (source.DrawingAttributes.DrawAsHighlighter || goneStrokes.Contains(key))
             {
                 continue;
             }
@@ -74,11 +80,14 @@ public sealed partial class MainWindow
             var builder = new InkStrokeBuilder();
             builder.SetDefaultDrawingAttributes(GhostAttributes(source.DrawingAttributes));
             InkStroke ghost = builder.CreateStrokeFromInkPoints(source.GetInkPoints(), transform);
-            _document.Container.AddStroke(ghost);
+            ghosts.Add(ghost);
             _ghostStrokes[key] = ghost;
         }
 
-        foreach (PageObject text in end.Objects.Values.Where(o => o.Kind == PageObjectKind.Text && !string.IsNullOrWhiteSpace(o.Text)))
+        _document.Container.AddStrokes(ghosts);   // one call to the ink thread instead of one per stroke
+
+        foreach (PageObject text in end.Objects.Values.Where(o =>
+                     o.Kind == PageObjectKind.Text && !string.IsNullOrWhiteSpace(o.Text) && !goneTexts.Contains(o.Id)))
         {
             PageObject ghost = text.Clone();
             ghost.Id = Guid.NewGuid();
@@ -93,6 +102,44 @@ public sealed partial class MainWindow
 
             _ghostTexts[text.Id] = ghost;
         }
+    }
+
+    /// <summary>
+    /// The ghosts that replaying up to a moment removes (same rules as Begin and Draw): a stroke that appears
+    /// at once, a see-through stroke whose drawing has started, any other stroke whose drawing has finished,
+    /// and a text whose box has appeared.
+    /// </summary>
+    private (HashSet<int> Strokes, HashSet<Guid> Texts) GhostsGoneBy(double position)
+    {
+        var strokes = new HashSet<int>();
+        var texts = new HashSet<Guid>();
+        foreach (ReplayTimeline.Item item in _timeline.Items)
+        {
+            if (item.Start > position)
+            {
+                break;   // items are in start order
+            }
+
+            RecordedEvent e = item.Event;
+            if (e.Kind == RecordedEventKind.StrokeAdd)
+            {
+                bool drawn = e.Duration > 0 && e.Strokes.Count == 1 && InRecording(e.Strokes[0]);
+                if (!drawn)
+                {
+                    strokes.UnionWith(e.Strokes);
+                }
+                else if (item.End <= position || IsSeeThrough(_recordedList[e.Strokes[0]]))
+                {
+                    strokes.Add(e.Strokes[0]);
+                }
+            }
+            else if (e.Kind == RecordedEventKind.ObjectAdd)
+            {
+                texts.Add(e.ObjectId);
+            }
+        }
+
+        return (strokes, texts);
     }
 
     /// <summary>Same tip, shape and pressure behaviour as the original, in the private colour, half as wide.</summary>
@@ -123,16 +170,39 @@ public sealed partial class MainWindow
         return attributes.DrawAsHighlighter || attributes.Kind == InkDrawingAttributesKind.Pencil;
     }
 
+    /// <summary>While seeking, ghosts to remove are collected and removed together (see SeekReplay).</summary>
+    private List<InkStroke>? _ghostRemovals;
+
     private void RemoveGhost(int key)
     {
-        if (_ghostStrokes.Remove(key, out InkStroke? ghost))
+        if (!_ghostStrokes.Remove(key, out InkStroke? ghost))
         {
-            foreach (InkStroke stroke in _document.Container.GetStrokes())
+            return;
+        }
+
+        if (_ghostRemovals is not null)
+        {
+            _ghostRemovals.Add(ghost);
+            return;
+        }
+
+        // Nothing else stays selected during replay (every selection there is made and deleted or moved at
+        // once), so selecting just the ghost is enough.
+        ghost.Selected = true;
+        _document.Container.DeleteSelected();
+    }
+
+    private void FlushGhostRemovals()
+    {
+        List<InkStroke>? ghosts = _ghostRemovals;
+        _ghostRemovals = null;
+        if (ghosts is { Count: > 0 })
+        {
+            foreach (InkStroke ghost in ghosts)
             {
-                stroke.Selected = false;
+                ghost.Selected = true;
             }
 
-            ghost.Selected = true;
             _document.Container.DeleteSelected();
         }
     }
@@ -147,10 +217,13 @@ public sealed partial class MainWindow
 
     private void ClearGhosts()
     {
+        _ghostRemovals = [];
         foreach (int key in _ghostStrokes.Keys.ToList())
         {
             RemoveGhost(key);
         }
+
+        FlushGhostRemovals();   // one delete for all of them
 
         foreach (Guid id in _ghostTexts.Keys.ToList())
         {
