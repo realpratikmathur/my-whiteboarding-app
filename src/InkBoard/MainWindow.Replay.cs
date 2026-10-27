@@ -58,6 +58,12 @@ public sealed partial class MainWindow
         }
 
         SpeedBox.SelectedIndex = ReplayClock.Speeds.ToList().IndexOf(1);
+
+        // Dragging the slider: pause while the thumb is held, carry on afterwards if it was playing.
+        ReplaySlider.ThumbToolTipValueConverter = new ReplayTimeConverter();
+        ReplaySlider.AddHandler(UIElement.PointerPressedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, _) => BeginScrub()), true);
+        ReplaySlider.AddHandler(UIElement.PointerReleasedEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, _) => EndScrub()), true);
+        ReplaySlider.AddHandler(UIElement.PointerCaptureLostEvent, new Microsoft.UI.Xaml.Input.PointerEventHandler((_, _) => EndScrub()), true);
     }
 
     // ---- Enter / leave --------------------------------------------------------------------------
@@ -134,7 +140,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>Back to the start: only the private notes are on the page (and the ghost page, if chosen).</summary>
-    private void RestartReplay()
+    private void RestartReplay(bool resetView = true, double ghostsAt = -1)
     {
         _replayTimer.Stop();
         ClearGhosts();
@@ -162,10 +168,10 @@ public sealed partial class MainWindow
         _clock = new ReplayClock(_timeline.Length) { Speed = ReplayClock.Speeds[Math.Max(0, SpeedBox.SelectedIndex)] };
         if (StartMode == ReplayStartMode.Ghost)
         {
-            ShowGhostPage();
+            ShowGhostPage(ghostsAt);
         }
 
-        if (FollowMode != ReplayFollowMode.Off)
+        if (resetView && FollowMode != ReplayFollowMode.Off)
         {
             // With the view under manual control it stays where the presenter put it.
             CanvasScroller.ChangeView(0, 0, null, disableAnimation: true);
@@ -239,10 +245,16 @@ public sealed partial class MainWindow
 
     private void UpdateReplayBar()
     {
+        _updatingSlider = true;
+        ReplaySlider.Maximum = Math.Max(1, _clock.Length);
+        if (!_scrubbing)
+        {
+            ReplaySlider.Value = _clock.Position;
+        }
+
+        _updatingSlider = false;
         PlayPauseIcon.Glyph = _clock.IsPlaying ? "" : "";
         ToolTipService.SetToolTip(PlayPauseButton, _clock.IsPlaying ? "Pause" : "Play");
-        ReplayProgress.Maximum = Math.Max(1, _clock.Length);
-        ReplayProgress.Value = _clock.Position;
         ReplayTime.Text = $"{TimeSpan.FromMilliseconds(_clock.Position):m\\:ss} / {TimeSpan.FromMilliseconds(_clock.Length):m\\:ss}";
     }
 
@@ -257,8 +269,20 @@ public sealed partial class MainWindow
     internal void AdvanceReplay(double elapsedMs)
     {
         _clock.Advance(elapsedMs);
-        double position = _clock.Position;
+        ApplyUpTo(_clock.Position);
+        FollowWithCamera(elapsedMs);
+        if (_clock.AtEnd)
+        {
+            _replayTimer.Stop();
+        }
 
+        UpdateReplayBar();
+    }
+
+    /// <summary>Brings the page up to a replay position: every event that has started by then, strokes being
+    /// drawn shown as far as they had got.</summary>
+    private void ApplyUpTo(double position)
+    {
         while (_nextItem < _timeline.Items.Count && _timeline.Items[_nextItem].Start <= position)
         {
             ReplayTimeline.Item next = _timeline.Items[_nextItem++];
@@ -273,18 +297,121 @@ public sealed partial class MainWindow
             Begin(next);
         }
 
+        FlushStrokeAdds();   // before strokes still being drawn, so those stay on top as in normal playback
         foreach (DrawingStroke stroke in _drawing.ToList())
         {
             Draw(stroke, position);
         }
+    }
 
-        FollowWithCamera(elapsedMs);
-        if (_clock.AtEnd)
+    // ---- Seeking --------------------------------------------------------------------------------
+
+    private bool _updatingSlider;
+    private bool _scrubbing;
+    private bool _resumeAfterScrub;
+    private bool _seekQueued;
+    private double _pendingSeek;
+
+    /// <summary>
+    /// Jumps to a moment of the replay. Forward: everything up to then is applied at once. Backward: the page
+    /// is rebuilt from the start (private notes and the ghost page included) up to then. Playing or paused
+    /// stays as it was; the view jumps to the writing unless Follow is off.
+    /// </summary>
+    internal void SeekReplay(double position)
+    {
+        if (!_replaying)
+        {
+            return;
+        }
+
+        position = Math.Clamp(position, 0, _clock.Length);
+        bool playing = _clock.IsPlaying;
+        if (position < _clock.Position)
+        {
+            RestartReplay(resetView: false, ghostsAt: position);
+        }
+
+        _clock.Seek(position);
+        _ghostRemovals = [];
+        _strokeAdds = [];
+        try
+        {
+            ApplyUpTo(position);
+        }
+        finally
+        {
+            FlushStrokeAdds();
+            _strokeAdds = null;
+            FlushGhostRemovals();
+        }
+
+        if (FollowMode != ReplayFollowMode.Off)
+        {
+            FollowWithCamera(3000);   // one long step: the view arrives at the writing at once
+        }
+
+        _clock.IsPlaying = playing && !_clock.AtEnd;
+        if (_clock.IsPlaying)
+        {
+            _replayWatch.Restart();
+            _replayTimer.Start();
+        }
+        else
         {
             _replayTimer.Stop();
         }
 
         UpdateReplayBar();
+    }
+
+    private void OnReplaySliderChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_updatingSlider || !_replaying)
+        {
+            return;
+        }
+
+        // Seek to the newest position once the UI is free: a fast drag does not queue up a seek per pixel.
+        _pendingSeek = e.NewValue;
+        if (!_seekQueued)
+        {
+            _seekQueued = true;
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                _seekQueued = false;
+                SeekReplay(_pendingSeek);
+            });
+        }
+
+        ReplayTime.Text = $"{TimeSpan.FromMilliseconds(e.NewValue):m\\:ss} / {TimeSpan.FromMilliseconds(_clock.Length):m\\:ss}";
+    }
+
+    private void BeginScrub()
+    {
+        if (!_replaying || _scrubbing)
+        {
+            return;
+        }
+
+        _scrubbing = true;
+        _resumeAfterScrub = _clock.IsPlaying;
+        _clock.IsPlaying = false;
+        _replayTimer.Stop();
+    }
+
+    private void EndScrub()
+    {
+        if (!_scrubbing)
+        {
+            return;
+        }
+
+        _scrubbing = false;
+        SeekReplay(ReplaySlider.Value);
+        if (_resumeAfterScrub && !_clock.AtEnd)
+        {
+            SetReplayPlaying(true);
+        }
     }
 
     // ---- Applying events ------------------------------------------------------------------------
@@ -317,6 +444,7 @@ public sealed partial class MainWindow
                 break;
 
             case RecordedEventKind.StrokeRemove:
+                FlushStrokeAdds();
                 SelectReplayStrokes(e.Strokes, selected: true);
                 _document.Container.DeleteSelected();
                 foreach (int key in e.Strokes)
@@ -327,6 +455,7 @@ public sealed partial class MainWindow
                 break;
 
             case RecordedEventKind.StrokeMove:
+                FlushStrokeAdds();
                 var delta = new Vector2((float)e.Dx, (float)e.Dy);
                 foreach (int key in e.Strokes)
                 {
@@ -383,9 +512,43 @@ public sealed partial class MainWindow
     {
         InkStroke clone = _recordedList[key].Clone();
         clone.PointTransform = PlacedTransform(clone, key);
-        _document.Container.AddStroke(clone);
+        if (_strokeAdds is not null)
+        {
+            _strokeAdds.Add(clone);   // seeking: added together (FlushStrokeAdds)
+        }
+        else
+        {
+            _document.Container.AddStroke(clone);
+        }
+
         _replayStrokes[key] = clone;
         return clone;
+    }
+
+    /// <summary>While seeking, finished strokes are collected and added to the page in one call.</summary>
+    private System.Collections.Generic.List<InkStroke>? _strokeAdds;
+
+    /// <summary>Puts collected strokes on the page; needed before anything selects or removes strokes.</summary>
+    private void FlushStrokeAdds()
+    {
+        // Ghosts first: deleting is quick on a page that has not just received hundreds of new strokes, slow
+        // right after (the delete waits for the ink layer to finish drawing them).
+        if (_ghostRemovals is { Count: > 0 })
+        {
+            foreach (InkStroke ghost in _ghostRemovals)
+            {
+                ghost.Selected = true;
+            }
+
+            _document.Container.DeleteSelected();
+            _ghostRemovals.Clear();
+        }
+
+        if (_strokeAdds is { Count: > 0 })
+        {
+            _document.Container.AddStrokes(_strokeAdds);
+            _strokeAdds.Clear();
+        }
     }
 
     private bool SelectReplayStrokes(IEnumerable<int> keys, bool selected)

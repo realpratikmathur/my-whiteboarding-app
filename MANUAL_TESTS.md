@@ -583,6 +583,28 @@ Verified with real mouse drags; please check with the pen and a finger.
 - [ ] With the pen: a quick tap on a picture with the "A" tool selects it; pen drags move/resize like the mouse.
 - [ ] Side-by-side with OneNote: insert the same picture in both and compare moving/resizing.
 
+## Phase 21 — Fast-forward and rewind during replay
+
+The replay bar now has two rows: a full-width slider with the time next to it, and the buttons underneath.
+Verified with real mouse and keyboard input; please check with the pen and a finger on the Surface.
+
+- [ ] Drag the slider's round thumb while the replay plays: playback waits while you hold it, the page shows
+      the lesson at that moment (a stroke being written appears part-drawn), the tooltip shows the time.
+      Let go: it carries on playing from there.
+- [ ] Drag backwards: earlier moments appear correctly (later strokes, text and pictures disappear again;
+      erased strokes come back if they had not yet been erased at that moment).
+- [ ] Pause, then click anywhere on the slider: it jumps there and stays paused. Play continues from there.
+- [ ] Click the slider, then use the arrow keys: right/left jump to the next/previous 5-second mark,
+      Page Up/Page Down by 30 seconds.
+- [ ] With "Start: ghost page": after any jump, the magenta ghost shows exactly what has not been replayed
+      yet at that moment; in OBS the video shows only the replayed part.
+- [ ] With "Follow: centred" or "nudge at edges", the view jumps to the writing after a seek; with
+      "Follow: off" it stays where you put it.
+- [ ] Your private notes stay on the page through every jump.
+- [ ] A long lesson (several hundred strokes): dragging the thumb quickly back and forth stays responsive
+      (on an 800-stroke test lesson a jump took 25-200 ms).
+- [ ] Exit replay after seeking: the page is exactly as it was before the replay.
+
 ## Phase 6 — Custom drying (parked)
 
 Not built yet. It starts only after you confirm Phases 1-5 pass the pen tests above.

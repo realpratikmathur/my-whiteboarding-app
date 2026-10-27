@@ -113,6 +113,12 @@ public static class SelfTest
                     case "replay":
                         await window.RunReplayTestAsync(log);
                         break;
+                    case "replay-seek":
+                        await window.RunReplaySeekTestAsync(log);
+                        break;
+                    case "replay-seek-mouse":
+                        await window.RunReplaySeekMouseTestAsync(log);
+                        break;
                     case "pictures":
                         await window.RunPicturesTestAsync(log);
                         break;

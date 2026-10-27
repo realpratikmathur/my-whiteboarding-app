@@ -193,6 +193,16 @@ public sealed class ReplayClock(double length)
         Position = 0;
         IsPlaying = false;
     }
+
+    /// <summary>Jumps to a position (fast-forward or rewind); playing or paused stays as it was.</summary>
+    public void Seek(double position)
+    {
+        Position = Math.Clamp(position, 0, Length);
+        if (AtEnd)
+        {
+            IsPlaying = false;
+        }
+    }
 }
 
 /// <summary>What the page shows when a replay starts.</summary>
