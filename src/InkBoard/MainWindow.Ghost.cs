@@ -84,7 +84,15 @@ public sealed partial class MainWindow
             _ghostStrokes[key] = ghost;
         }
 
-        _document.Container.AddStrokes(ghosts);   // one call to the ink thread instead of one per stroke
+        if (_offline)
+        {
+            _strokeAdds!.AddRange(ghosts);   // first, so the real ink of the rewind goes on top of them
+        }
+        else
+        {
+            _document.Container.AddStrokes(ghosts);
+        }
+   // one call to the ink thread instead of one per stroke
 
         foreach (PageObject text in end.Objects.Values.Where(o =>
                      o.Kind == PageObjectKind.Text && !string.IsNullOrWhiteSpace(o.Text) && !goneTexts.Contains(o.Id)))
@@ -92,12 +100,9 @@ public sealed partial class MainWindow
             PageObject ghost = text.Clone();
             ghost.Id = Guid.NewGuid();
             ghost.Color = PrivateInk.Hex;
-            ShowObject(ghost);
-            if (_objectViews.TryGetValue(ghost, out FrameworkElement? view) && view is TextBox box)
+            if (!_offline)
             {
-                box.IsReadOnly = true;
-                box.IsHitTestVisible = false;
-                box.IsTabStop = false;
+                ShowTextGhost(ghost);
             }
 
             _ghostTexts[text.Id] = ghost;
@@ -142,6 +147,18 @@ public sealed partial class MainWindow
         return (strokes, texts);
     }
 
+    /// <summary>Puts a text ghost on the page; it cannot be clicked or typed into.</summary>
+    private void ShowTextGhost(PageObject ghost)
+    {
+        ShowObject(ghost);
+        if (_objectViews.TryGetValue(ghost, out FrameworkElement? view) && view is TextBox box)
+        {
+            box.IsReadOnly = true;
+            box.IsHitTestVisible = false;
+            box.IsTabStop = false;
+        }
+    }
+
     /// <summary>Same tip, shape and pressure behaviour as the original, in the private colour, half as wide.</summary>
     private static InkDrawingAttributes GhostAttributes(InkDrawingAttributes source)
     {
@@ -177,6 +194,12 @@ public sealed partial class MainWindow
     {
         if (!_ghostStrokes.Remove(key, out InkStroke? ghost))
         {
+            return;
+        }
+
+        if (_offline)
+        {
+            _strokeAdds!.Remove(ghost);   // never put on the page
             return;
         }
 
